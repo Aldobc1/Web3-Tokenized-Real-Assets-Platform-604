@@ -16,7 +16,7 @@ const Home = () => {
       <section 
         className="bg-gradient-to-br from-yellow-400 to-yellow-600 text-white relative overflow-hidden"
         style={{
-          backgroundImage: 'url(https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751590699962-Este%20amarillo.png)',
+          backgroundImage: 'url(https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751591872700-Este%20amarillo.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundBlendMode: 'overlay'

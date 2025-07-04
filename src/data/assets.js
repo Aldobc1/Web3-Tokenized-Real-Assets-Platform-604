@@ -1,4 +1,7 @@
-export const assets = [
+import supabase from '../lib/supabase';
+
+// Local fallback data
+const localAssets = [
   {
     id: 1,
     name: 'Retroexcavadora CAT 320',
@@ -82,127 +85,170 @@ export const assets = [
       locations: '3 sucursales',
       locationsEn: '3 locations'
     }
-  },
-  {
-    id: 4,
-    name: 'Grúa Torre Liebherr',
-    nameEn: 'Liebherr Tower Crane',
-    type: 'equipment',
-    image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&h=600&fit=crop',
-    projectedReturn: 10.5,
-    available: 80,
-    sold: 20,
-    tokenPrice: 200,
-    operatorId: 1,
-    operator: 'Construction Equipment Co',
-    operatorEn: 'Construction Equipment Co',
-    description: 'Grúa torre Liebherr para proyectos de construcción de gran altura. Equipo especializado con alta demanda.',
-    descriptionEn: 'Liebherr tower crane for high-rise construction projects. Specialized equipment with high demand.',
-    documents: [
-      { name: 'Certificado de Seguridad', nameEn: 'Safety Certificate', url: '#' },
-      { name: 'Manual de Operación', nameEn: 'Operation Manual', url: '#' }
-    ],
-    operatorData: {
-      name: 'Construction Equipment Co',
-      experience: '20 años',
-      experienceEn: '20 years',
-      equipment: '100+ equipos',
-      equipmentEn: '100+ equipment'
-    }
-  },
-  {
-    id: 5,
-    name: 'Casa Vacacional Orlando',
-    nameEn: 'Orlando Vacation Home',
-    type: 'airbnb',
-    image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop',
-    projectedReturn: 9.8,
-    available: 55,
-    sold: 45,
-    tokenPrice: 300,
-    operatorId: 2,
-    operator: 'Orlando Vacation Rentals',
-    operatorEn: 'Orlando Vacation Rentals',
-    description: 'Casa vacacional cerca de Disney World con piscina privada y capacidad para 8 personas.',
-    descriptionEn: 'Vacation home near Disney World with private pool and capacity for 8 people.',
-    documents: [
-      { name: 'Título de Propiedad', nameEn: 'Property Title', url: '#' },
-      { name: 'Seguro de Propiedad', nameEn: 'Property Insurance', url: '#' }
-    ],
-    operatorData: {
-      name: 'Orlando Vacation Rentals',
-      experience: '12 años',
-      experienceEn: '12 years',
-      properties: '25+ propiedades',
-      propertiesEn: '25+ properties'
-    }
-  },
-  {
-    id: 6,
-    name: 'Restaurante Italiano',
-    nameEn: 'Italian Restaurant',
-    type: 'business',
-    image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=600&fit=crop',
-    projectedReturn: 13.2,
-    available: 40,
-    sold: 60,
-    tokenPrice: 400,
-    operatorId: 3,
-    operator: 'Bella Italia Group',
-    operatorEn: 'Bella Italia Group',
-    description: 'Restaurante italiano tradicional con 25 años de historia y ubicación premium en el distrito financiero.',
-    descriptionEn: 'Traditional Italian restaurant with 25 years of history and premium location in the financial district.',
-    documents: [
-      { name: 'Licencia de Restaurante', nameEn: 'Restaurant License', url: '#' },
-      { name: 'Certificado Sanitario', nameEn: 'Health Certificate', url: '#' }
-    ],
-    operatorData: {
-      name: 'Bella Italia Group',
-      experience: '25 años',
-      experienceEn: '25 years',
-      restaurants: '5 restaurantes',
-      restaurantsEn: '5 restaurants'
-    }
   }
 ];
 
-export const getAssetById = (id) => {
+let assetsCache = null;
+
+// Fetch assets from Supabase
+export const fetchAssets = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('assets_mt2024')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching assets:', error);
+      return localAssets;
+    }
+
+    // Transform Supabase data to match our format
+    const transformedAssets = data.map(asset => ({
+      id: asset.id,
+      name: asset.name,
+      nameEn: asset.name_en,
+      type: asset.type,
+      image: asset.image,
+      projectedReturn: parseFloat(asset.projected_return),
+      available: asset.available,
+      sold: asset.sold,
+      tokenPrice: asset.token_price,
+      operatorId: asset.operator_id,
+      operator: asset.operator,
+      operatorEn: asset.operator_en,
+      description: asset.description,
+      descriptionEn: asset.description_en,
+      documents: [
+        { name: 'Documentos', nameEn: 'Documents', url: '#' }
+      ],
+      operatorData: {
+        name: asset.operator,
+        experience: '10+ años',
+        experienceEn: '10+ years'
+      }
+    }));
+
+    assetsCache = transformedAssets;
+    return transformedAssets;
+  } catch (error) {
+    console.error('Error in fetchAssets:', error);
+    return localAssets;
+  }
+};
+
+export const getAssets = async () => {
+  if (assetsCache) return assetsCache;
+  return await fetchAssets();
+};
+
+export const getAssetById = async (id) => {
+  const assets = await getAssets();
   return assets.find(asset => asset.id === parseInt(id));
 };
 
-export const getAssetsByType = (type) => {
+export const getAssetsByType = async (type) => {
+  const assets = await getAssets();
   if (type === 'all') return assets;
   return assets.filter(asset => asset.type === type);
 };
 
-export const getFeaturedAssets = () => {
+export const getFeaturedAssets = async () => {
+  const assets = await getAssets();
   return assets.slice(0, 3);
 };
 
-export const addAsset = (assetData) => {
-  const newAsset = {
-    ...assetData,
-    id: Math.max(...assets.map(asset => asset.id)) + 1,
-    available: 100 - assetData.sold
-  };
-  assets.push(newAsset);
-  return newAsset;
-};
+export const addAsset = async (assetData) => {
+  try {
+    const { data, error } = await supabase
+      .from('assets_mt2024')
+      .insert([{
+        name: assetData.name,
+        name_en: assetData.nameEn,
+        type: assetData.type,
+        image: assetData.image,
+        projected_return: assetData.projectedReturn,
+        available: assetData.available,
+        sold: assetData.sold,
+        token_price: assetData.tokenPrice,
+        operator_id: assetData.operatorId,
+        operator: assetData.operator,
+        operator_en: assetData.operatorEn,
+        description: assetData.description,
+        description_en: assetData.descriptionEn
+      }])
+      .select()
+      .single();
 
-export const updateAsset = (id, assetData) => {
-  const index = assets.findIndex(asset => asset.id === parseInt(id));
-  if (index !== -1) {
-    assets[index] = { ...assets[index], ...assetData };
-    return assets[index];
+    if (error) {
+      console.error('Error adding asset:', error);
+      return null;
+    }
+
+    // Clear cache to force refresh
+    assetsCache = null;
+    return data;
+  } catch (error) {
+    console.error('Error in addAsset:', error);
+    return null;
   }
-  return null;
 };
 
-export const deleteAsset = (id) => {
-  const index = assets.findIndex(asset => asset.id === parseInt(id));
-  if (index !== -1) {
-    assets.splice(index, 1);
+export const updateAsset = async (id, assetData) => {
+  try {
+    const { data, error } = await supabase
+      .from('assets_mt2024')
+      .update({
+        name: assetData.name,
+        name_en: assetData.nameEn,
+        type: assetData.type,
+        image: assetData.image,
+        projected_return: assetData.projectedReturn,
+        available: assetData.available,
+        sold: assetData.sold,
+        token_price: assetData.tokenPrice,
+        operator_id: assetData.operatorId,
+        operator: assetData.operator,
+        operator_en: assetData.operatorEn,
+        description: assetData.description,
+        description_en: assetData.descriptionEn,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating asset:', error);
+      return null;
+    }
+
+    // Clear cache to force refresh
+    assetsCache = null;
+    return data;
+  } catch (error) {
+    console.error('Error in updateAsset:', error);
+    return null;
+  }
+};
+
+export const deleteAsset = async (id) => {
+  try {
+    const { error } = await supabase
+      .from('assets_mt2024')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting asset:', error);
+      return false;
+    }
+
+    // Clear cache to force refresh
+    assetsCache = null;
     return true;
+  } catch (error) {
+    console.error('Error in deleteAsset:', error);
+    return false;
   }
-  return false;
 };

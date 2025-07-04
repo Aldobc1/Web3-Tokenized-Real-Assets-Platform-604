@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useWeb3 } from '../contexts/Web3Context';
-import { assets, addAsset, updateAsset, deleteAsset } from '../data/assets';
-import { operators } from '../data/operators';
+import { getAssets, addAsset, updateAsset, deleteAsset } from '../data/assets';
+import { getOperators } from '../data/operators';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
@@ -14,6 +14,9 @@ const AdminOpportunities = () => {
   const { userRole } = useWeb3();
   const [showForm, setShowForm] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
+  const [assets, setAssets] = useState([]);
+  const [operators, setOperators] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     nameEn: '',
@@ -27,21 +30,29 @@ const AdminOpportunities = () => {
     descriptionEn: ''
   });
 
-  // Redirect if not admin
-  if (userRole !== 'admin') {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Acceso Denegado
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Solo los administradores pueden acceder a esta página
-          </p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (userRole === 'admin') {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [userRole]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [assetsData, operatorsData] = await Promise.all([
+        getAssets(),
+        getOperators()
+      ]);
+      setAssets(assetsData);
+      setOperators(operatorsData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -51,7 +62,7 @@ const AdminOpportunities = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const selectedOperator = operators.find(op => op.id === parseInt(formData.operatorId));
@@ -66,15 +77,21 @@ const AdminOpportunities = () => {
       operatorEn: selectedOperator?.nameEn || ''
     };
 
-    if (editingAsset) {
-      updateAsset(editingAsset.id, assetData);
-      alert('Oportunidad actualizada exitosamente');
-    } else {
-      addAsset(assetData);
-      alert('Oportunidad agregada exitosamente');
+    try {
+      if (editingAsset) {
+        await updateAsset(editingAsset.id, assetData);
+        alert('Oportunidad actualizada exitosamente');
+      } else {
+        await addAsset(assetData);
+        alert('Oportunidad agregada exitosamente');
+      }
+      
+      resetForm();
+      loadData(); // Reload data
+    } catch (error) {
+      console.error('Error saving asset:', error);
+      alert('Error al guardar la oportunidad');
     }
-    
-    resetForm();
   };
 
   const resetForm = () => {
@@ -111,10 +128,16 @@ const AdminOpportunities = () => {
     setShowForm(true);
   };
 
-  const handleDelete = (assetId) => {
+  const handleDelete = async (assetId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta oportunidad?')) {
-      deleteAsset(assetId);
-      alert('Oportunidad eliminada exitosamente');
+      try {
+        await deleteAsset(assetId);
+        alert('Oportunidad eliminada exitosamente');
+        loadData(); // Reload data
+      } catch (error) {
+        console.error('Error deleting asset:', error);
+        alert('Error al eliminar la oportunidad');
+      }
     }
   };
 
@@ -127,6 +150,33 @@ const AdminOpportunities = () => {
     if (!operator) return 'N/A';
     return language === 'es' ? operator.name : operator.nameEn;
   };
+
+  // Redirect if not admin - moved after hooks
+  if (userRole !== 'admin') {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Acceso Denegado
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300">
+            Solo los administradores pueden acceder a esta página
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useWeb3 } from '../contexts/Web3Context';
-import { operators, addOperator, updateOperator, deleteOperator } from '../data/operators';
+import { getOperators, addOperator, updateOperator, deleteOperator } from '../data/operators';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
@@ -13,6 +13,8 @@ const AdminOperators = () => {
   const { userRole } = useWeb3();
   const [showForm, setShowForm] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
+  const [operators, setOperators] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     nameEn: '',
@@ -27,21 +29,25 @@ const AdminOperators = () => {
     descriptionEn: ''
   });
 
-  // Redirect if not admin
-  if (userRole !== 'admin') {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Acceso Denegado
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Solo los administradores pueden acceder a esta página
-          </p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (userRole === 'admin') {
+      loadOperators();
+    } else {
+      setLoading(false);
+    }
+  }, [userRole]);
+
+  const loadOperators = async () => {
+    try {
+      setLoading(true);
+      const operatorsData = await getOperators();
+      setOperators(operatorsData);
+    } catch (error) {
+      console.error('Error loading operators:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -51,18 +57,24 @@ const AdminOperators = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (editingOperator) {
-      updateOperator(editingOperator.id, formData);
-      alert('Operador actualizado exitosamente');
-    } else {
-      addOperator(formData);
-      alert('Operador agregado exitosamente');
+    try {
+      if (editingOperator) {
+        await updateOperator(editingOperator.id, formData);
+        alert('Operador actualizado exitosamente');
+      } else {
+        await addOperator(formData);
+        alert('Operador agregado exitosamente');
+      }
+      
+      resetForm();
+      loadOperators(); // Reload data
+    } catch (error) {
+      console.error('Error saving operator:', error);
+      alert('Error al guardar el operador');
     }
-    
-    resetForm();
   };
 
   const resetForm = () => {
@@ -101,16 +113,49 @@ const AdminOperators = () => {
     setShowForm(true);
   };
 
-  const handleDelete = (operatorId) => {
+  const handleDelete = async (operatorId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este operador?')) {
-      deleteOperator(operatorId);
-      alert('Operador eliminado exitosamente');
+      try {
+        await deleteOperator(operatorId);
+        alert('Operador eliminado exitosamente');
+        loadOperators(); // Reload data
+      } catch (error) {
+        console.error('Error deleting operator:', error);
+        alert('Error al eliminar el operador');
+      }
     }
   };
 
   const getOperatorName = (operator) => {
     return language === 'es' ? operator.name : operator.nameEn;
   };
+
+  // Redirect if not admin - moved after hooks
+  if (userRole !== 'admin') {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Acceso Denegado
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300">
+            Solo los administradores pueden acceder a esta página
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

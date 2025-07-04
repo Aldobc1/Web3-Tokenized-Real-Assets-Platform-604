@@ -26,7 +26,7 @@ const Header = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-3">
               <img 
-                src="https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751590704378-blob" 
+                src="https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751591878073-blob" 
                 alt="Logo" 
                 className="h-8 w-auto"
               />
