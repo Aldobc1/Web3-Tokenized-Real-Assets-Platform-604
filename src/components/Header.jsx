@@ -2,15 +2,17 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useWeb3 } from '../contexts/Web3Context';
+import { useTheme } from '../contexts/ThemeContext';
 import LanguageToggle from './LanguageToggle';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 
-const { FiUser, FiLogOut, FiUsers, FiSettings } = FiIcons;
+const { FiUser, FiLogOut, FiMoon, FiSun } = FiIcons;
 
 const Header = () => {
   const { t } = useLanguage();
   const { isConnected, isRegistered, account, disconnect, userRole } = useWeb3();
+  const { isDarkMode, toggleTheme } = useTheme();
   const location = useLocation();
 
   const isActive = (path) => {
@@ -18,12 +20,19 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b">
+    <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <Link to="/" className="text-2xl font-bold text-yellow-600">
-              Mundo Tangible
+            <Link to="/" className="flex items-center space-x-3">
+              <img 
+                src="https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751590704378-blob" 
+                alt="Logo" 
+                className="h-8 w-auto"
+              />
+              <span className="text-xl font-bold text-gray-900 dark:text-white">
+                Mundo Tangible
+              </span>
             </Link>
           </div>
 
@@ -33,7 +42,7 @@ const Header = () => {
               className={`px-3 py-2 text-sm font-medium transition-colors ${
                 isActive('/') 
                   ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                  : 'text-gray-700 hover:text-yellow-600'
+                  : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
               }`}
             >
               {t('nav.home')}
@@ -43,7 +52,7 @@ const Header = () => {
               className={`px-3 py-2 text-sm font-medium transition-colors ${
                 isActive('/opportunities') 
                   ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                  : 'text-gray-700 hover:text-yellow-600'
+                  : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
               }`}
             >
               {t('nav.opportunities')}
@@ -57,17 +66,27 @@ const Header = () => {
                   className={`px-3 py-2 text-sm font-medium transition-colors ${
                     isActive('/admin/users') 
                       ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                      : 'text-gray-700 hover:text-yellow-600'
+                      : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
                   }`}
                 >
                   {t('nav.users')}
+                </Link>
+                <Link
+                  to="/admin/operators"
+                  className={`px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive('/admin/operators') 
+                      ? 'text-yellow-600 border-b-2 border-yellow-600' 
+                      : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
+                  }`}
+                >
+                  {t('nav.manageOperators')}
                 </Link>
                 <Link
                   to="/admin/opportunities"
                   className={`px-3 py-2 text-sm font-medium transition-colors ${
                     isActive('/admin/opportunities') 
                       ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                      : 'text-gray-700 hover:text-yellow-600'
+                      : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
                   }`}
                 >
                   {t('nav.manageOpportunities')}
@@ -81,7 +100,7 @@ const Header = () => {
                 className={`px-3 py-2 text-sm font-medium transition-colors ${
                   isActive('/profile') 
                     ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                    : 'text-gray-700 hover:text-yellow-600'
+                    : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
                 }`}
               >
                 {t('nav.profile')}
@@ -92,17 +111,25 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             <LanguageToggle />
             
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-gray-700 dark:text-gray-300 hover:text-yellow-600 transition-colors"
+            >
+              <SafeIcon icon={isDarkMode ? FiSun : FiMoon} className="w-5 h-5" />
+            </button>
+            
             {isConnected ? (
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2">
                   <SafeIcon icon={FiUser} className="w-4 h-4" />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
                     {account?.slice(0, 6)}...{account?.slice(-4)}
                   </span>
                 </div>
                 <button
                   onClick={disconnect}
-                  className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-700 hover:text-red-600 transition-colors"
+                  className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-red-600 transition-colors"
                 >
                   <SafeIcon icon={FiLogOut} className="w-4 h-4" />
                   <span>{t('nav.logout')}</span>
@@ -111,7 +138,7 @@ const Header = () => {
             ) : (
               <Link
                 to="/login"
-                className="bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-600 transition-colors"
+                className="bg-yellow-500 text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-600 transition-colors"
               >
                 {t('nav.login')}
               </Link>

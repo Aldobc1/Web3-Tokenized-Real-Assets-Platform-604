@@ -1,28 +1,28 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useWeb3 } from '../contexts/Web3Context';
-import { assets, addAsset, updateAsset, deleteAsset } from '../data/assets';
-import { operators } from '../data/operators';
+import { operators, addOperator, updateOperator, deleteOperator } from '../data/operators';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 
-const { FiPlus, FiEdit, FiTrash2, FiSave, FiX } = FiIcons;
+const { FiPlus, FiEdit, FiTrash2, FiSave, FiX, FiTool } = FiIcons;
 
-const AdminOpportunities = () => {
+const AdminOperators = () => {
   const { t, language } = useLanguage();
   const { userRole } = useWeb3();
   const [showForm, setShowForm] = useState(false);
-  const [editingAsset, setEditingAsset] = useState(null);
+  const [editingOperator, setEditingOperator] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     nameEn: '',
-    type: 'equipment',
-    image: '',
-    projectedReturn: '',
-    sold: '',
-    tokenPrice: '',
-    operatorId: '',
+    email: '',
+    phone: '',
+    company: '',
+    experience: '',
+    experienceEn: '',
+    specialization: '',
+    specializationEn: '',
     description: '',
     descriptionEn: ''
   });
@@ -54,24 +54,12 @@ const AdminOpportunities = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    const selectedOperator = operators.find(op => op.id === parseInt(formData.operatorId));
-    const assetData = {
-      ...formData,
-      projectedReturn: parseFloat(formData.projectedReturn),
-      sold: parseInt(formData.sold),
-      available: 100 - parseInt(formData.sold),
-      tokenPrice: parseInt(formData.tokenPrice),
-      operatorId: parseInt(formData.operatorId),
-      operator: selectedOperator?.name || '',
-      operatorEn: selectedOperator?.nameEn || ''
-    };
-
-    if (editingAsset) {
-      updateAsset(editingAsset.id, assetData);
-      alert('Oportunidad actualizada exitosamente');
+    if (editingOperator) {
+      updateOperator(editingOperator.id, formData);
+      alert('Operador actualizado exitosamente');
     } else {
-      addAsset(assetData);
-      alert('Oportunidad agregada exitosamente');
+      addOperator(formData);
+      alert('Operador agregado exitosamente');
     }
     
     resetForm();
@@ -81,50 +69,46 @@ const AdminOpportunities = () => {
     setFormData({
       name: '',
       nameEn: '',
-      type: 'equipment',
-      image: '',
-      projectedReturn: '',
-      sold: '',
-      tokenPrice: '',
-      operatorId: '',
+      email: '',
+      phone: '',
+      company: '',
+      experience: '',
+      experienceEn: '',
+      specialization: '',
+      specializationEn: '',
       description: '',
       descriptionEn: ''
     });
     setShowForm(false);
-    setEditingAsset(null);
+    setEditingOperator(null);
   };
 
-  const handleEdit = (asset) => {
-    setEditingAsset(asset);
+  const handleEdit = (operator) => {
+    setEditingOperator(operator);
     setFormData({
-      name: asset.name,
-      nameEn: asset.nameEn,
-      type: asset.type,
-      image: asset.image,
-      projectedReturn: asset.projectedReturn.toString(),
-      sold: asset.sold.toString(),
-      tokenPrice: asset.tokenPrice.toString(),
-      operatorId: asset.operatorId?.toString() || '',
-      description: asset.description,
-      descriptionEn: asset.descriptionEn
+      name: operator.name,
+      nameEn: operator.nameEn,
+      email: operator.email,
+      phone: operator.phone,
+      company: operator.company,
+      experience: operator.experience,
+      experienceEn: operator.experienceEn,
+      specialization: operator.specialization,
+      specializationEn: operator.specializationEn,
+      description: operator.description,
+      descriptionEn: operator.descriptionEn
     });
     setShowForm(true);
   };
 
-  const handleDelete = (assetId) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta oportunidad?')) {
-      deleteAsset(assetId);
-      alert('Oportunidad eliminada exitosamente');
+  const handleDelete = (operatorId) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este operador?')) {
+      deleteOperator(operatorId);
+      alert('Operador eliminado exitosamente');
     }
   };
 
-  const getAssetName = (asset) => {
-    return language === 'es' ? asset.name : asset.nameEn;
-  };
-
-  const getOperatorName = (operatorId) => {
-    const operator = operators.find(op => op.id === operatorId);
-    if (!operator) return 'N/A';
+  const getOperatorName = (operator) => {
     return language === 'es' ? operator.name : operator.nameEn;
   };
 
@@ -138,14 +122,14 @@ const AdminOpportunities = () => {
         >
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {t('admin.opportunities.title')}
+              {t('admin.operators.title')}
             </h1>
             <button
               onClick={() => setShowForm(true)}
               className="bg-yellow-500 text-black px-4 py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors flex items-center gap-2"
             >
               <SafeIcon icon={FiPlus} className="w-4 h-4" />
-              {t('admin.opportunities.add')}
+              {t('admin.operators.add')}
             </button>
           </div>
 
@@ -155,7 +139,7 @@ const AdminOpportunities = () => {
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    {editingAsset ? 'Editar Oportunidad' : 'Agregar Nueva Oportunidad'}
+                    {editingOperator ? 'Editar Operador' : 'Agregar Nuevo Operador'}
                   </h2>
                   <button
                     onClick={resetForm}
@@ -197,49 +181,12 @@ const AdminOpportunities = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {t('form.type')}
-                      </label>
-                      <select
-                        name="type"
-                        value={formData.type}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white"
-                      >
-                        <option value="equipment">Equipo y Maquinaria</option>
-                        <option value="airbnb">Airbnb</option>
-                        <option value="business">Negocios</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {t('form.operator')}
-                      </label>
-                      <select
-                        name="operatorId"
-                        value={formData.operatorId}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white"
-                        required
-                      >
-                        <option value="">Seleccionar Operador</option>
-                        {operators.map(operator => (
-                          <option key={operator.id} value={operator.id}>
-                            {language === 'es' ? operator.name : operator.nameEn}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {t('form.projectedReturn')}
+                        {t('form.email')}
                       </label>
                       <input
-                        type="number"
-                        step="0.1"
-                        name="projectedReturn"
-                        value={formData.projectedReturn}
+                        type="email"
+                        name="email"
+                        value={formData.email}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white"
                         required
@@ -248,12 +195,12 @@ const AdminOpportunities = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {t('form.tokenPrice')}
+                        {t('form.phone')}
                       </label>
                       <input
-                        type="number"
-                        name="tokenPrice"
-                        value={formData.tokenPrice}
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white"
                         required
@@ -262,12 +209,54 @@ const AdminOpportunities = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Vendido (%)
+                        {t('form.company')}
                       </label>
                       <input
-                        type="number"
-                        name="sold"
-                        value={formData.sold}
+                        type="text"
+                        name="company"
+                        value={formData.company}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t('form.experience')}
+                      </label>
+                      <input
+                        type="text"
+                        name="experience"
+                        value={formData.experience}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Experiencia en Inglés
+                      </label>
+                      <input
+                        type="text"
+                        name="experienceEn"
+                        value={formData.experienceEn}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t('form.specialization')}
+                      </label>
+                      <input
+                        type="text"
+                        name="specialization"
+                        value={formData.specialization}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white"
                         required
@@ -277,12 +266,12 @@ const AdminOpportunities = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {t('form.image')}
+                      Especialización en Inglés
                     </label>
                     <input
-                      type="url"
-                      name="image"
-                      value={formData.image}
+                      type="text"
+                      name="specializationEn"
+                      value={formData.specializationEn}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white"
                       required
@@ -338,11 +327,11 @@ const AdminOpportunities = () => {
             </div>
           )}
 
-          {/* Opportunities List */}
+          {/* Operators List */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Oportunidades Actuales
+                Operadores Registrados
               </h2>
             </div>
             
@@ -351,22 +340,16 @@ const AdminOpportunities = () => {
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Activo
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Tipo
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Operador
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Precio Token
+                      Contacto
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Rentabilidad
+                      Especialización
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Disponible
+                      Experiencia
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Acciones
@@ -374,54 +357,50 @@ const AdminOpportunities = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {assets.map((asset, index) => (
+                  {operators.map((operator, index) => (
                     <motion.tr
-                      key={asset.id}
+                      key={operator.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.4, delay: index * 0.1 }}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <img
-                            src={asset.image}
-                            alt={getAssetName(asset)}
-                            className="w-10 h-10 rounded-lg object-cover"
-                          />
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                            <SafeIcon icon={FiTool} className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {getAssetName(asset)}
+                              {getOperatorName(operator)}
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {operator.company}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
-                          {t(`asset.${asset.type}`)}
+                        <div className="text-sm text-gray-900 dark:text-white">{operator.email}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{operator.phone}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                          {language === 'es' ? operator.specialization : operator.specializationEn}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {getOperatorName(asset.operatorId)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        ${asset.tokenPrice}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {asset.projectedReturn}%
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {asset.available}%
+                        {language === 'es' ? operator.experience : operator.experienceEn}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
                           <button
-                            onClick={() => handleEdit(asset)}
+                            onClick={() => handleEdit(operator)}
                             className="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300"
                           >
                             <SafeIcon icon={FiEdit} className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(asset.id)}
+                            onClick={() => handleDelete(operator.id)}
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                           >
                             <SafeIcon icon={FiTrash2} className="w-4 h-4" />
@@ -440,4 +419,4 @@ const AdminOpportunities = () => {
   );
 };
 
-export default AdminOpportunities;
+export default AdminOperators;

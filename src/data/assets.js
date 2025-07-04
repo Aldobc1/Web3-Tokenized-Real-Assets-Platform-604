@@ -9,6 +9,7 @@ export const assets = [
     available: 65,
     sold: 35,
     tokenPrice: 100,
+    operatorId: 1,
     operator: 'Heavy Equipment Solutions',
     operatorEn: 'Heavy Equipment Solutions',
     description: 'Retroexcavadora CAT 320 en excelente estado, utilizada para proyectos de construcción en Miami. Genera ingresos constantes a través de contratos de alquiler.',
@@ -36,6 +37,7 @@ export const assets = [
     available: 45,
     sold: 55,
     tokenPrice: 500,
+    operatorId: 2,
     operator: 'Miami Properties LLC',
     operatorEn: 'Miami Properties LLC',
     description: 'Edificio de apartamentos en Miami Beach con alta demanda turística. Propiedad completamente amoblada y equipada para Airbnb.',
@@ -63,6 +65,7 @@ export const assets = [
     available: 30,
     sold: 70,
     tokenPrice: 250,
+    operatorId: 3,
     operator: 'Sweet Dreams Corp',
     operatorEn: 'Sweet Dreams Corp',
     description: 'Heladería artesanal establecida con clientela fiel y ubicación privilegiada en el centro de la ciudad.',
@@ -90,6 +93,7 @@ export const assets = [
     available: 80,
     sold: 20,
     tokenPrice: 200,
+    operatorId: 1,
     operator: 'Construction Equipment Co',
     operatorEn: 'Construction Equipment Co',
     description: 'Grúa torre Liebherr para proyectos de construcción de gran altura. Equipo especializado con alta demanda.',
@@ -116,6 +120,7 @@ export const assets = [
     available: 55,
     sold: 45,
     tokenPrice: 300,
+    operatorId: 2,
     operator: 'Orlando Vacation Rentals',
     operatorEn: 'Orlando Vacation Rentals',
     description: 'Casa vacacional cerca de Disney World con piscina privada y capacidad para 8 personas.',
@@ -142,6 +147,7 @@ export const assets = [
     available: 40,
     sold: 60,
     tokenPrice: 400,
+    operatorId: 3,
     operator: 'Bella Italia Group',
     operatorEn: 'Bella Italia Group',
     description: 'Restaurante italiano tradicional con 25 años de historia y ubicación premium en el distrito financiero.',
@@ -171,4 +177,32 @@ export const getAssetsByType = (type) => {
 
 export const getFeaturedAssets = () => {
   return assets.slice(0, 3);
+};
+
+export const addAsset = (assetData) => {
+  const newAsset = {
+    ...assetData,
+    id: Math.max(...assets.map(asset => asset.id)) + 1,
+    available: 100 - assetData.sold
+  };
+  assets.push(newAsset);
+  return newAsset;
+};
+
+export const updateAsset = (id, assetData) => {
+  const index = assets.findIndex(asset => asset.id === parseInt(id));
+  if (index !== -1) {
+    assets[index] = { ...assets[index], ...assetData };
+    return assets[index];
+  }
+  return null;
+};
+
+export const deleteAsset = (id) => {
+  const index = assets.findIndex(asset => asset.id === parseInt(id));
+  if (index !== -1) {
+    assets.splice(index, 1);
+    return true;
+  }
+  return false;
 };

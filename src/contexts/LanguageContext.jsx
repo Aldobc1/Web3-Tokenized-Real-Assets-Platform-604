@@ -28,6 +28,7 @@ export const LanguageProvider = ({ children }) => {
         'nav.logout': 'Cerrar Sesión',
         'nav.users': 'Usuarios',
         'nav.manageOpportunities': 'Gestionar Oportunidades',
+        'nav.manageOperators': 'Gestionar Operadores',
         
         // Home
         'home.hero.title': 'Tokeniza e Invierte en Activos del Mundo Real',
@@ -87,6 +88,10 @@ export const LanguageProvider = ({ children }) => {
         'admin.opportunities.add': 'Agregar Oportunidad',
         'admin.opportunities.edit': 'Editar',
         'admin.opportunities.delete': 'Eliminar',
+        'admin.operators.title': 'Gestionar Operadores',
+        'admin.operators.add': 'Agregar Operador',
+        'admin.operators.edit': 'Editar',
+        'admin.operators.delete': 'Eliminar',
         
         // Roles
         'role.admin': 'Administrador',
@@ -104,8 +109,32 @@ export const LanguageProvider = ({ children }) => {
         'form.tokenPrice': 'Precio del Token',
         'form.operator': 'Operador',
         'form.operatorEn': 'Operador en Inglés',
+        'form.email': 'Correo Electrónico',
+        'form.phone': 'Teléfono',
+        'form.company': 'Empresa',
+        'form.experience': 'Experiencia',
+        'form.specialization': 'Especialización',
         'form.save': 'Guardar',
         'form.cancel': 'Cancelar',
+        
+        // Onboarding
+        'onboarding.welcome': 'Bienvenido a Mundo Tangible',
+        'onboarding.step1': 'Conecta tu Wallet',
+        'onboarding.step2': 'Completa tu Perfil',
+        'onboarding.step3': 'Explora Oportunidades',
+        'onboarding.step4': 'Realiza tu Primera Inversión',
+        'onboarding.quiz.title': 'Quiz de Conocimiento',
+        'onboarding.quiz.question1': '¿Qué son los activos tokenizados?',
+        'onboarding.quiz.question2': '¿Cuál es el beneficio principal de la tokenización?',
+        'onboarding.quiz.question3': '¿Qué necesitas para invertir?',
+        
+        // Referral
+        'referral.title': 'Programa de Referidos',
+        'referral.subtitle': 'Invita amigos y gana recompensas',
+        'referral.code': 'Tu Código de Referido',
+        'referral.share': 'Compartir',
+        'referral.rewards': 'Recompensas Ganadas',
+        'referral.referrals': 'Referidos Totales',
       },
       en: {
         // Navigation
@@ -116,6 +145,7 @@ export const LanguageProvider = ({ children }) => {
         'nav.logout': 'Logout',
         'nav.users': 'Users',
         'nav.manageOpportunities': 'Manage Opportunities',
+        'nav.manageOperators': 'Manage Operators',
         
         // Home
         'home.hero.title': 'Tokenize and Invest in Real World Assets',
@@ -175,6 +205,10 @@ export const LanguageProvider = ({ children }) => {
         'admin.opportunities.add': 'Add Opportunity',
         'admin.opportunities.edit': 'Edit',
         'admin.opportunities.delete': 'Delete',
+        'admin.operators.title': 'Manage Operators',
+        'admin.operators.add': 'Add Operator',
+        'admin.operators.edit': 'Edit',
+        'admin.operators.delete': 'Delete',
         
         // Roles
         'role.admin': 'Administrator',
@@ -192,8 +226,32 @@ export const LanguageProvider = ({ children }) => {
         'form.tokenPrice': 'Token Price',
         'form.operator': 'Operator',
         'form.operatorEn': 'Operator in English',
+        'form.email': 'Email',
+        'form.phone': 'Phone',
+        'form.company': 'Company',
+        'form.experience': 'Experience',
+        'form.specialization': 'Specialization',
         'form.save': 'Save',
         'form.cancel': 'Cancel',
+        
+        // Onboarding
+        'onboarding.welcome': 'Welcome to Mundo Tangible',
+        'onboarding.step1': 'Connect your Wallet',
+        'onboarding.step2': 'Complete your Profile',
+        'onboarding.step3': 'Explore Opportunities',
+        'onboarding.step4': 'Make your First Investment',
+        'onboarding.quiz.title': 'Knowledge Quiz',
+        'onboarding.quiz.question1': 'What are tokenized assets?',
+        'onboarding.quiz.question2': 'What is the main benefit of tokenization?',
+        'onboarding.quiz.question3': 'What do you need to invest?',
+        
+        // Referral
+        'referral.title': 'Referral Program',
+        'referral.subtitle': 'Invite friends and earn rewards',
+        'referral.code': 'Your Referral Code',
+        'referral.share': 'Share',
+        'referral.rewards': 'Earned Rewards',
+        'referral.referrals': 'Total Referrals',
       }
     };
     
