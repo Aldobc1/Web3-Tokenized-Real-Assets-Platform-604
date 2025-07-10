@@ -12,6 +12,9 @@ import Profile from './pages/Profile';
 import AdminUsers from './pages/AdminUsers';
 import AdminOperators from './pages/AdminOperators';
 import AdminOpportunities from './pages/AdminOpportunities';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminSmartContracts from './pages/AdminSmartContracts';
+import AdminLayout from './layouts/AdminLayout';
 
 function App() {
   return (
@@ -22,14 +25,21 @@ function App() {
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
               <Header />
               <Routes>
+                {/* Public Routes */}
                 <Route path="/" element={<Home />} />
                 <Route path="/opportunities" element={<Opportunities />} />
                 <Route path="/asset/:id" element={<AssetDetail />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/profile" element={<Profile />} />
-                <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/operators" element={<AdminOperators />} />
-                <Route path="/admin/opportunities" element={<AdminOpportunities />} />
+
+                {/* Admin Routes with Layout */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="users" element={<AdminUsers />} />
+                  <Route path="operators" element={<AdminOperators />} />
+                  <Route path="opportunities" element={<AdminOpportunities />} />
+                  <Route path="smart-contracts" element={<AdminSmartContracts />} />
+                </Route>
               </Routes>
             </div>
           </Router>

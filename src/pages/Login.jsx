@@ -1,186 +1,178 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../contexts/LanguageContext';
-import { useWeb3 } from '../contexts/Web3Context';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
+import { useWeb3 } from '../contexts/Web3Context';
 
-const { FiWallet, FiUser, FiMail, FiCheck } = FiIcons;
+const { FiMail, FiLock, FiUser, FiWallet } = FiIcons;
 
 const Login = () => {
-  const { t } = useLanguage();
-  const { connectWallet, isConnected, isRegistered, registerUser } = useWeb3();
-  const navigate = useNavigate();
-  
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'wallet'
   const [formData, setFormData] = useState({
-    name: '',
     email: '',
-    declaration: false,
-    terms: false
+    password: '',
+    name: '',
+    confirmPassword: ''
   });
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  const handleRegistration = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.email) {
-      alert('Por favor completa todos los campos');
-      return;
+    if (isRegistering) {
+      if (formData.password !== formData.confirmPassword) {
+        alert('Las contraseñas no coinciden');
+        return;
+      }
+      // Lógica de registro
+    } else {
+      // Lógica de inicio de sesión
     }
-    
-    if (!formData.declaration || !formData.terms) {
-      alert('Debes aceptar la declaración y los términos y condiciones');
-      return;
-    }
-    
-    registerUser(formData);
-    navigate('/');
   };
-
-  if (isConnected && isRegistered) {
-    navigate('/');
-    return null;
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center"
-        >
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            {isConnected ? t('auth.register') : t('auth.connectWallet')}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold">
+            {isRegistering ? 'Crear cuenta' : 'Iniciar sesión'}
           </h2>
-          <p className="text-gray-600">
-            {isConnected 
-              ? 'Completa tu registro para comenzar a invertir'
-              : 'Conecta tu wallet MetaMask para comenzar'
-            }
-          </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-white rounded-xl shadow-lg p-8"
-        >
-          {!isConnected ? (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <SafeIcon icon={FiWallet} className="w-8 h-8 text-primary-600" />
-                </div>
-                <p className="text-gray-600 mb-6">
-                  Para acceder a Mundo Tangible necesitas conectar tu wallet MetaMask
-                </p>
-              </div>
-              
-              <button
-                onClick={connectWallet}
-                className="w-full bg-primary-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <SafeIcon icon={FiWallet} className="w-5 h-5" />
-                {t('auth.connectWallet')}
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleRegistration} className="space-y-6">
+        <div className="flex justify-center space-x-4 mb-8">
+          <button
+            onClick={() => setLoginMethod('email')}
+            className={`px-4 py-2 rounded-lg ${
+              loginMethod === 'email'
+                ? 'bg-yellow-500 text-white'
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            <SafeIcon icon={FiMail} className="w-5 h-5" />
+            Email
+          </button>
+          <button
+            onClick={() => setLoginMethod('wallet')}
+            className={`px-4 py-2 rounded-lg ${
+              loginMethod === 'wallet'
+                ? 'bg-yellow-500 text-white'
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            <SafeIcon icon={FiWallet} className="w-5 h-5" />
+            Wallet
+          </button>
+        </div>
+
+        {loginMethod === 'email' ? (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {isRegistering && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.name')}
+                <label className="block text-sm font-medium text-gray-700">
+                  Nombre
                 </label>
-                <div className="relative">
-                  <SafeIcon icon={FiUser} className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <div className="mt-1 relative">
+                  <SafeIcon
+                    icon={FiUser}
+                    className="absolute left-3 top-3 text-gray-400"
+                  />
                   <input
                     type="text"
                     name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Tu nombre completo"
                     required
+                    className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="Tu nombre"
                   />
                 </div>
               </div>
+            )}
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <div className="mt-1 relative">
+                <SafeIcon
+                  icon={FiMail}
+                  className="absolute left-3 top-3 text-gray-400"
+                />
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="tu@email.com"
+                />
+              </div>
+            </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Contraseña
+              </label>
+              <div className="mt-1 relative">
+                <SafeIcon
+                  icon={FiLock}
+                  className="absolute left-3 top-3 text-gray-400"
+                />
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            {isRegistering && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.email')}
+                <label className="block text-sm font-medium text-gray-700">
+                  Confirmar Contraseña
                 </label>
-                <div className="relative">
-                  <SafeIcon icon={FiMail} className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <div className="mt-1 relative">
+                  <SafeIcon
+                    icon={FiLock}
+                    className="absolute left-3 top-3 text-gray-400"
+                  />
                   <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="tu@email.com"
+                    type="password"
+                    name="confirmPassword"
                     required
+                    className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="••••••••"
                   />
                 </div>
               </div>
+            )}
 
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="flex items-center h-5">
-                    <input
-                      type="checkbox"
-                      name="declaration"
-                      checked={formData.declaration}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                      required
-                    />
-                  </div>
-                  <div className="ml-3 text-sm">
-                    <label className="text-gray-700">
-                      {t('auth.declaration')}
-                    </label>
-                  </div>
-                </div>
+            <button
+              type="submit"
+              className="w-full bg-yellow-500 text-white py-3 rounded-lg"
+            >
+              {isRegistering ? 'Registrarse' : 'Iniciar sesión'}
+            </button>
+          </form>
+        ) : (
+          <div className="text-center">
+            <button
+              onClick={connectWallet}
+              className="w-full bg-yellow-500 text-white py-3 rounded-lg"
+            >
+              Conectar Wallet
+            </button>
+          </div>
+        )}
 
-                <div className="flex items-start">
-                  <div className="flex items-center h-5">
-                    <input
-                      type="checkbox"
-                      name="terms"
-                      checked={formData.terms}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                      required
-                    />
-                  </div>
-                  <div className="ml-3 text-sm">
-                    <label className="text-gray-700">
-                      {t('auth.terms')}
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-primary-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <SafeIcon icon={FiCheck} className="w-5 h-5" />
-                {t('auth.complete')}
-              </button>
-            </form>
-          )}
-        </motion.div>
+        <div className="text-center mt-4">
+          <button
+            onClick={() => setIsRegistering(!isRegistering)}
+            className="text-sm text-yellow-600 hover:text-yellow-500"
+          >
+            {isRegistering
+              ? '¿Ya tienes cuenta? Inicia sesión'
+              : '¿No tienes cuenta? Regístrate'}
+          </button>
+        </div>
       </div>
     </div>
   );

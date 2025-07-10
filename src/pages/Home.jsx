@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import HeroCarousel from '../components/HeroCarousel';
@@ -8,12 +8,29 @@ import { motion } from 'framer-motion';
 
 const Home = () => {
   const { t } = useLanguage();
-  const featuredAssets = getFeaturedAssets();
+  const [featuredAssets, setFeaturedAssets] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadFeaturedAssets();
+  }, []);
+
+  const loadFeaturedAssets = async () => {
+    try {
+      const assets = await getFeaturedAssets();
+      setFeaturedAssets(assets);
+    } catch (error) {
+      console.error('Error loading featured assets:', error);
+      setFeaturedAssets([]); // Set empty array as fallback
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Section */}
-      <section 
+      <section
         className="bg-gradient-to-br from-yellow-400 to-yellow-600 text-white relative overflow-hidden"
         style={{
           backgroundImage: 'url(https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751591872700-Este%20amarillo.png)',
@@ -25,7 +42,7 @@ const Home = () => {
         <div className="absolute inset-0 bg-yellow-500/80"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center mb-12">
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -33,7 +50,7 @@ const Home = () => {
             >
               {t('home.hero.title')}
             </motion.h1>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -42,7 +59,6 @@ const Home = () => {
               {t('home.hero.subtitle')}
             </motion.p>
           </div>
-          
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -65,18 +81,38 @@ const Home = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {featuredAssets.map((asset, index) => (
-              <motion.div
-                key={asset.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-              >
-                <AssetCard asset={asset} />
-              </motion.div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-gray-300 dark:bg-gray-700 rounded-xl h-64"></div>
+                  <div className="mt-4 space-y-2">
+                    <div className="bg-gray-300 dark:bg-gray-700 h-4 rounded w-3/4"></div>
+                    <div className="bg-gray-300 dark:bg-gray-700 h-4 rounded w-1/2"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : featuredAssets.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+              {featuredAssets.map((asset, index) => (
+                <motion.div
+                  key={asset.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                >
+                  <AssetCard asset={asset} />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400 text-lg">
+                No hay activos disponibles en este momento
+              </p>
+            </div>
+          )}
 
           <div className="text-center">
             <Link
@@ -97,27 +133,31 @@ const Home = () => {
               <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">🏗️</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">{t('asset.equipment')}</h3>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+                {t('asset.equipment')}
+              </h3>
               <p className="text-gray-600 dark:text-gray-300">
                 Invierte en maquinaria y equipo industrial con retornos estables
               </p>
             </div>
-            
             <div className="text-center">
               <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">🏠</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">{t('asset.airbnb')}</h3>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+                {t('asset.airbnb')}
+              </h3>
               <p className="text-gray-600 dark:text-gray-300">
                 Propiedades vacacionales con alta demanda turística
               </p>
             </div>
-            
             <div className="text-center">
               <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">🏪</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">{t('asset.business')}</h3>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+                {t('asset.business')}
+              </h3>
               <p className="text-gray-600 dark:text-gray-300">
                 Negocios establecidos con flujo de efectivo comprobado
               </p>

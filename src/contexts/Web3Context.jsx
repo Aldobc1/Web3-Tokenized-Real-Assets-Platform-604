@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import supabase from '../lib/supabase';
+import { buyAssetTokens } from '../data/assets';
 
 const Web3Context = createContext();
 
+// Custom hook for using the Web3 context
 export const useWeb3 = () => {
   const context = useContext(Web3Context);
   if (!context) {
@@ -12,13 +14,15 @@ export const useWeb3 = () => {
   return context;
 };
 
+// Web3 Provider component
 export const Web3Provider = ({ children }) => {
   const [account, setAccount] = useState(null);
   const [provider, setProvider] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
-  const [userRole, setUserRole] = useState('tokenizer'); // Default role
+  const [userRole, setUserRole] = useState('tokenizer');
+  const [userWallets, setUserWallets] = useState([]);
 
   useEffect(() => {
     checkConnection();
@@ -29,7 +33,6 @@ export const Web3Provider = ({ children }) => {
       try {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.listAccounts();
-        
         if (accounts.length > 0) {
           setAccount(accounts[0].address);
           setProvider(provider);
@@ -49,7 +52,6 @@ export const Web3Provider = ({ children }) => {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
-        
         setAccount(address);
         setProvider(provider);
         setIsConnected(true);
@@ -64,21 +66,20 @@ export const Web3Provider = ({ children }) => {
 
   const checkRegistration = async (address) => {
     try {
-      // Check Supabase first
-      const { data, error } = await supabase
-        .from('users_mt2024')
-        .select('*')
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallets_mt2024')
+        .select('*, users_mt2024(*)')
         .eq('wallet_address', address)
         .single();
 
-      if (!error && data) {
-        setUserProfile(data);
+      if (!walletError && walletData) {
+        setUserProfile(walletData.users_mt2024);
         setIsRegistered(true);
-        determineUserRole(data.email);
+        determineUserRole(walletData.users_mt2024.email);
+        fetchUserWallets(walletData.users_mt2024.id);
         return;
       }
 
-      // Fallback to localStorage
       const userData = localStorage.getItem(`user_${address}`);
       if (userData) {
         const profile = JSON.parse(userData);
@@ -88,8 +89,6 @@ export const Web3Provider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error checking registration:', error);
-      
-      // Fallback to localStorage
       const userData = localStorage.getItem(`user_${address}`);
       if (userData) {
         const profile = JSON.parse(userData);
@@ -97,6 +96,60 @@ export const Web3Provider = ({ children }) => {
         setIsRegistered(true);
         determineUserRole(profile.email);
       }
+    }
+  };
+
+  const fetchUserWallets = async (userId) => {
+    if (!userId) return;
+    try {
+      const { data, error } = await supabase
+        .from('wallets_mt2024')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (!error && data) {
+        setUserWallets(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user wallets:', error);
+    }
+  };
+
+  const addWallet = async (walletAddress, signature) => {
+    if (!userProfile || !userProfile.id) return false;
+    try {
+      const { data: existingWallet, error: checkError } = await supabase
+        .from('wallets_mt2024')
+        .select('*')
+        .eq('wallet_address', walletAddress)
+        .single();
+
+      if (existingWallet) {
+        alert('Esta wallet ya está asociada a una cuenta');
+        return false;
+      }
+
+      const { data, error } = await supabase
+        .from('wallets_mt2024')
+        .insert([{
+          user_id: userProfile.id,
+          wallet_address: walletAddress,
+          signature: signature,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (!error) {
+        fetchUserWallets(userProfile.id);
+        return true;
+      } else {
+        console.error('Error adding wallet:', error);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error in addWallet:', error);
+      return false;
     }
   };
 
@@ -111,46 +164,77 @@ export const Web3Provider = ({ children }) => {
   };
 
   const registerUser = async (userData) => {
-    const userWithAddress = {
-      ...userData,
-      address: account,
-      wallet_address: account
-    };
-
     try {
-      // Save to Supabase
-      const { data, error } = await supabase
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users_mt2024')
+        .select('*')
+        .eq('email', userData.email)
+        .single();
+
+      if (existingUser) {
+        alert('Este correo electrónico ya está registrado');
+        return false;
+      }
+
+      const userWithAddress = {
+        ...userData,
+        address: account,
+        wallet_address: account
+      };
+
+      const { data: userData2, error: userError } = await supabase
         .from('users_mt2024')
         .insert([{
-          wallet_address: account,
           name: userData.name,
           email: userData.email,
           declaration: userData.declaration,
           terms: userData.terms,
-          role: userData.email === 'barbacastillo@gmail.com' ? 'admin' : 'tokenizer'
+          role: userData.email === 'barbacastillo@gmail.com' ? 'admin' : 'tokenizer',
+          created_at: new Date().toISOString()
         }])
         .select()
         .single();
 
-      if (!error) {
-        setUserProfile(data);
-        setIsRegistered(true);
-        determineUserRole(userData.email);
-      } else {
-        console.error('Error saving to Supabase:', error);
-        // Fallback to localStorage
+      if (userError) {
+        console.error('Error saving user to Supabase:', userError);
         localStorage.setItem(`user_${account}`, JSON.stringify(userWithAddress));
         setUserProfile(userWithAddress);
         setIsRegistered(true);
         determineUserRole(userData.email);
+        return true;
       }
+
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallets_mt2024')
+        .insert([{
+          user_id: userData2.id,
+          wallet_address: account,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (walletError) {
+        console.error('Error saving wallet to Supabase:', walletError);
+      }
+
+      setUserProfile(userData2);
+      setIsRegistered(true);
+      determineUserRole(userData.email);
+      fetchUserWallets(userData2.id);
+      return true;
     } catch (error) {
       console.error('Error in registerUser:', error);
-      // Fallback to localStorage
+      const userWithAddress = {
+        ...userData,
+        address: account,
+        wallet_address: account
+      };
       localStorage.setItem(`user_${account}`, JSON.stringify(userWithAddress));
       setUserProfile(userWithAddress);
       setIsRegistered(true);
       determineUserRole(userData.email);
+      return true;
     }
   };
 
@@ -161,25 +245,25 @@ export const Web3Provider = ({ children }) => {
     setIsRegistered(false);
     setUserProfile(null);
     setUserRole('tokenizer');
+    setUserWallets([]);
   };
 
   const getAllUsers = async () => {
     try {
-      // Try to get from Supabase first
       const { data, error } = await supabase
         .from('users_mt2024')
-        .select('*')
+        .select('*, wallets_mt2024(*)')
         .order('created_at', { ascending: false });
 
       if (!error && data) {
         return data.map(user => ({
           ...user,
-          address: user.wallet_address,
+          address: user.wallets_mt2024?.[0]?.wallet_address,
+          wallets: user.wallets_mt2024 || [],
           role: user.role
         }));
       }
 
-      // Fallback to localStorage
       const users = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -187,16 +271,15 @@ export const Web3Provider = ({ children }) => {
           const userData = JSON.parse(localStorage.getItem(key));
           const email = userData.email;
           let role = 'tokenizer';
-          
           if (email === 'barbacastillo@gmail.com') {
             role = 'admin';
           } else if (email && email.includes('operador')) {
             role = 'operador';
           }
-          
-          users.push({ ...userData, role });
+          users.push({...userData, role});
         }
       }
+
       return users;
     } catch (error) {
       console.error('Error getting all users:', error);
@@ -206,41 +289,35 @@ export const Web3Provider = ({ children }) => {
 
   const saveHolding = async (assetId, tokens) => {
     if (!account) return false;
-
     try {
-      // Save to Supabase
       const { data, error } = await supabase
         .from('holdings_mt2024')
-        .upsert({
-          user_wallet: account,
-          asset_id: assetId,
-          tokens: tokens
-        }, {
-          onConflict: 'user_wallet,asset_id'
-        })
-        .select()
-        .single();
+        .upsert(
+          {
+            user_wallet: account,
+            asset_id: assetId,
+            tokens: tokens,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'user_wallet,asset_id' }
+        );
 
-      if (!error) {
-        return true;
+      if (error) {
+        console.error('Error saving holding:', error);
+        throw error;
       }
 
-      // Fallback to localStorage
-      localStorage.setItem(`holdings_${account}_${assetId}`, tokens.toString());
+      await buyAssetTokens(assetId, tokens, account);
       return true;
     } catch (error) {
       console.error('Error saving holding:', error);
-      // Fallback to localStorage
-      localStorage.setItem(`holdings_${account}_${assetId}`, tokens.toString());
-      return true;
+      throw error;
     }
   };
 
   const getHolding = async (assetId) => {
     if (!account) return 0;
-
     try {
-      // Try Supabase first
       const { data, error } = await supabase
         .from('holdings_mt2024')
         .select('tokens')
@@ -248,38 +325,43 @@ export const Web3Provider = ({ children }) => {
         .eq('asset_id', assetId)
         .single();
 
-      if (!error && data) {
-        return data.tokens;
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return 0;
+        }
+        throw error;
       }
 
-      // Fallback to localStorage
-      const holdings = localStorage.getItem(`holdings_${account}_${assetId}`);
-      return holdings ? parseInt(holdings) : 0;
+      return data?.tokens || 0;
     } catch (error) {
       console.error('Error getting holding:', error);
-      
-      // Fallback to localStorage
-      const holdings = localStorage.getItem(`holdings_${account}_${assetId}`);
-      return holdings ? parseInt(holdings) : 0;
+      return 0;
     }
   };
 
+  const contextValue = {
+    account,
+    provider,
+    isConnected,
+    isRegistered,
+    userProfile,
+    userRole,
+    userWallets,
+    connectWallet,
+    registerUser,
+    disconnect,
+    getAllUsers,
+    saveHolding,
+    getHolding,
+    addWallet
+  };
+
   return (
-    <Web3Context.Provider value={{
-      account,
-      provider,
-      isConnected,
-      isRegistered,
-      userProfile,
-      userRole,
-      connectWallet,
-      registerUser,
-      disconnect,
-      getAllUsers,
-      saveHolding,
-      getHolding
-    }}>
+    <Web3Context.Provider value={contextValue}>
       {children}
     </Web3Context.Provider>
   );
 };
+
+// Export the context for advanced use cases
+export { Web3Context };

@@ -15,6 +15,14 @@ const Header = () => {
   const { isDarkMode, toggleTheme } = useTheme();
   const location = useLocation();
 
+  // Check if we're in an admin route
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  // Don't show header in admin routes - we'll use the AdminLayout instead
+  if (userRole === 'admin' && isAdminRoute) {
+    return null;
+  }
+
   const isActive = (path) => {
     return location.pathname === path;
   };
@@ -24,15 +32,12 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-3">
+            <Link to="/" className="flex items-center">
               <img 
-                src="https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751591878073-blob" 
+                src="https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751995492624-Este%20amarillo.png" 
                 alt="Logo" 
-                className="h-8 w-auto"
+                className="h-10 w-auto" 
               />
-              <span className="text-xl font-bold text-gray-900 dark:text-white">
-                Mundo Tangible
-              </span>
             </Link>
           </div>
 
@@ -40,9 +45,7 @@ const Header = () => {
             <Link
               to="/"
               className={`px-3 py-2 text-sm font-medium transition-colors ${
-                isActive('/') 
-                  ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                  : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
+                isActive('/') ? 'text-yellow-600 border-b-2 border-yellow-600' : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
               }`}
             >
               {t('nav.home')}
@@ -50,57 +53,26 @@ const Header = () => {
             <Link
               to="/opportunities"
               className={`px-3 py-2 text-sm font-medium transition-colors ${
-                isActive('/opportunities') 
-                  ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                  : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
+                isActive('/opportunities') ? 'text-yellow-600 border-b-2 border-yellow-600' : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
               }`}
             >
               {t('nav.opportunities')}
             </Link>
-            
-            {/* Admin-only navigation */}
+
             {userRole === 'admin' && (
-              <>
-                <Link
-                  to="/admin/users"
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive('/admin/users') 
-                      ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                      : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
-                  }`}
-                >
-                  {t('nav.users')}
-                </Link>
-                <Link
-                  to="/admin/operators"
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive('/admin/operators') 
-                      ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                      : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
-                  }`}
-                >
-                  {t('nav.manageOperators')}
-                </Link>
-                <Link
-                  to="/admin/opportunities"
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive('/admin/opportunities') 
-                      ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                      : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
-                  }`}
-                >
-                  {t('nav.manageOpportunities')}
-                </Link>
-              </>
+              <Link
+                to="/admin/dashboard"
+                className={`px-3 py-2 text-sm font-medium transition-colors text-gray-700 dark:text-gray-300 hover:text-yellow-600`}
+              >
+                Panel de Admin
+              </Link>
             )}
-            
+
             {isConnected && isRegistered && (
               <Link
                 to="/profile"
                 className={`px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive('/profile') 
-                    ? 'text-yellow-600 border-b-2 border-yellow-600' 
-                    : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
+                  isActive('/profile') ? 'text-yellow-600 border-b-2 border-yellow-600' : 'text-gray-700 dark:text-gray-300 hover:text-yellow-600'
                 }`}
               >
                 {t('nav.profile')}
@@ -110,7 +82,6 @@ const Header = () => {
 
           <div className="flex items-center space-x-4">
             <LanguageToggle />
-            
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
@@ -118,7 +89,7 @@ const Header = () => {
             >
               <SafeIcon icon={isDarkMode ? FiSun : FiMoon} className="w-5 h-5" />
             </button>
-            
+
             {isConnected ? (
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2">

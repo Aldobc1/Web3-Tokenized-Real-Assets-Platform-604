@@ -11,14 +11,33 @@ const { FiChevronLeft, FiChevronRight } = FiIcons;
 const HeroCarousel = () => {
   const { t, language } = useLanguage();
   const [currentSlide, setCurrentSlide] = useState(0);
-  const assets = getFeaturedAssets();
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % assets.length);
-    }, 5000);
+    loadFeaturedAssets();
+  }, []);
 
-    return () => clearInterval(timer);
+  const loadFeaturedAssets = async () => {
+    try {
+      const featuredAssets = await getFeaturedAssets();
+      setAssets(featuredAssets);
+    } catch (error) {
+      console.error('Error loading featured assets:', error);
+      // Fallback to empty array
+      setAssets([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (assets.length > 0) {
+      const timer = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % assets.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
   }, [assets.length]);
 
   const nextSlide = () => {
@@ -37,6 +56,25 @@ const HeroCarousel = () => {
     return language === 'es' ? asset.description : asset.descriptionEn;
   };
 
+  if (loading) {
+    return (
+      <div className="h-96 md:h-[500px] bg-gray-200 dark:bg-gray-700 rounded-2xl flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600"></div>
+      </div>
+    );
+  }
+
+  if (assets.length === 0) {
+    return (
+      <div className="h-96 md:h-[500px] bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center text-white">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold mb-2">Mundo Tangible</h3>
+          <p className="text-lg opacity-90">Tokenización de Activos del Mundo Real</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative h-96 md:h-[500px] overflow-hidden rounded-2xl">
       <AnimatePresence mode="wait">
@@ -54,7 +92,6 @@ const HeroCarousel = () => {
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
             <div className="max-w-2xl">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -87,32 +124,35 @@ const HeroCarousel = () => {
       </AnimatePresence>
 
       {/* Navigation Buttons */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
-      >
-        <SafeIcon icon={FiChevronLeft} className="w-6 h-6" />
-      </button>
-      
-      <button
-        onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
-      >
-        <SafeIcon icon={FiChevronRight} className="w-6 h-6" />
-      </button>
-
-      {/* Dots Indicator */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
-        {assets.map((_, index) => (
+      {assets.length > 1 && (
+        <>
           <button
-            key={index}
-            onClick={() => setCurrentSlide(index)}
-            className={`w-3 h-3 rounded-full transition-colors ${
-              index === currentSlide ? 'bg-white' : 'bg-white/50'
-            }`}
-          />
-        ))}
-      </div>
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
+          >
+            <SafeIcon icon={FiChevronLeft} className="w-6 h-6" />
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
+          >
+            <SafeIcon icon={FiChevronRight} className="w-6 h-6" />
+          </button>
+
+          {/* Dots Indicator */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+            {assets.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`w-3 h-3 rounded-full transition-colors ${
+                  index === currentSlide ? 'bg-white' : 'bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

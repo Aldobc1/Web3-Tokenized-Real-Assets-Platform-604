@@ -15,43 +15,12 @@ const localOperators = [
     specializationEn: 'Industrial Machinery',
     description: 'Especialistas en equipos pesados con más de 15 años de experiencia en el mercado.',
     descriptionEn: 'Heavy equipment specialists with over 15 years of market experience.',
-    projects: '200+ proyectos',
-    projectsEn: '200+ projects'
-  },
-  {
-    id: 2,
-    name: 'Miami Properties LLC',
-    nameEn: 'Miami Properties LLC',
-    email: 'info@miamiproperties.com',
-    phone: '+1 (555) 987-6543',
-    company: 'Miami Properties LLC',
-    experience: '10 años',
-    experienceEn: '10 years',
-    specialization: 'Propiedades Vacacionales',
-    specializationEn: 'Vacation Properties',
-    description: 'Gestión profesional de propiedades vacacionales en Miami Beach.',
-    descriptionEn: 'Professional vacation property management in Miami Beach.',
-    properties: '50+ propiedades',
-    propertiesEn: '50+ properties'
-  },
-  {
-    id: 3,
-    name: 'Sweet Dreams Corp',
-    nameEn: 'Sweet Dreams Corp',
-    email: 'hello@sweetdreams.com',
-    phone: '+1 (555) 456-7890',
-    company: 'Sweet Dreams Corporation',
-    experience: '8 años',
-    experienceEn: '8 years',
-    specialization: 'Negocios Gastronómicos',
-    specializationEn: 'Food & Beverage Business',
-    description: 'Operadores especializados en negocios gastronómicos y heladerías.',
-    descriptionEn: 'Operators specialized in food & beverage businesses and ice cream shops.',
-    locations: '3 sucursales',
-    locationsEn: '3 locations'
+    profile_image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8YnVzaW5lc3MlMjBwZXJzb258ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60',
+    location: 'Miami, FL'
   }
 ];
 
+// Cache for operators data
 let operatorsCache = null;
 
 // Fetch operators from Supabase
@@ -80,7 +49,9 @@ export const fetchOperators = async () => {
       specialization: operator.specialization,
       specializationEn: operator.specialization_en,
       description: operator.description,
-      descriptionEn: operator.description_en
+      descriptionEn: operator.description_en,
+      profile_image: operator.profile_image,
+      location: operator.location
     }));
 
     operatorsCache = transformedOperators;
@@ -92,7 +63,7 @@ export const fetchOperators = async () => {
 };
 
 export const getOperators = async () => {
-  if (operatorsCache) return operatorsCache;
+  // Always fetch fresh data from Supabase
   return await fetchOperators();
 };
 
@@ -120,14 +91,16 @@ export const addOperator = async (operatorData) => {
         specialization: operatorData.specialization,
         specialization_en: operatorData.specializationEn,
         description: operatorData.description,
-        description_en: operatorData.descriptionEn
+        description_en: operatorData.descriptionEn,
+        profile_image: operatorData.profile_image,
+        location: operatorData.location
       }])
       .select()
       .single();
 
     if (error) {
       console.error('Error adding operator:', error);
-      return null;
+      throw error;
     }
 
     // Clear cache to force refresh
@@ -135,7 +108,7 @@ export const addOperator = async (operatorData) => {
     return data;
   } catch (error) {
     console.error('Error in addOperator:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -155,6 +128,8 @@ export const updateOperator = async (id, operatorData) => {
         specialization_en: operatorData.specializationEn,
         description: operatorData.description,
         description_en: operatorData.descriptionEn,
+        profile_image: operatorData.profile_image,
+        location: operatorData.location,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -163,7 +138,7 @@ export const updateOperator = async (id, operatorData) => {
 
     if (error) {
       console.error('Error updating operator:', error);
-      return null;
+      throw error;
     }
 
     // Clear cache to force refresh
@@ -171,7 +146,7 @@ export const updateOperator = async (id, operatorData) => {
     return data;
   } catch (error) {
     console.error('Error in updateOperator:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -184,7 +159,7 @@ export const deleteOperator = async (id) => {
 
     if (error) {
       console.error('Error deleting operator:', error);
-      return false;
+      throw error;
     }
 
     // Clear cache to force refresh
@@ -192,6 +167,29 @@ export const deleteOperator = async (id) => {
     return true;
   } catch (error) {
     console.error('Error in deleteOperator:', error);
-    return false;
+    throw error;
+  }
+};
+
+// Get average rating for an operator
+export const getOperatorAverageRating = async (operatorId) => {
+  try {
+    const { data, error } = await supabase
+      .from('operator_ratings_mt2024')
+      .select('rating')
+      .eq('operator_id', operatorId);
+
+    if (error) {
+      console.error('Error fetching operator ratings:', error);
+      return 0;
+    }
+
+    if (!data || data.length === 0) return 0;
+
+    const sum = data.reduce((acc, curr) => acc + curr.rating, 0);
+    return parseFloat((sum / data.length).toFixed(1));
+  } catch (error) {
+    console.error('Error in getOperatorAverageRating:', error);
+    return 0;
   }
 };
