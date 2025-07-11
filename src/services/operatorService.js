@@ -11,7 +11,7 @@ export const rateOperator = async (operatorId, userId, rating, comment = '') => 
           user_id: userId,
           rating: rating,
           comment: comment,
-          created_at: new Date().toISOString()
+          updated_at: new Date().toISOString()
         },
         { onConflict: 'operator_id,user_id' }
       )
@@ -93,4 +93,9 @@ export const getOperatorRatings = async (operatorId) => {
     console.error('Error in getOperatorRatings:', error);
     return [];
   }
+};
+
+// Add a rating (alias for rateOperator for consistency)
+export const addOperatorRating = async (operatorId, rating, comment, userId) => {
+  return await rateOperator(operatorId, userId, rating, comment);
 };

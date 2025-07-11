@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import supabase from '../lib/supabase';
 import { buyAssetTokens } from '../data/assets';
+import { loginUser, registerUser as authRegisterUser } from '../services/authService';
 
 const Web3Context = createContext();
 
@@ -14,6 +15,17 @@ export const useWeb3 = () => {
   return context;
 };
 
+// Simple hash function for passwords (frontend only)
+const hashPassword = async (password) => {
+  // Simple hash for frontend (NOT FOR PRODUCTION)
+  return btoa(password + 'salt123');
+};
+
+const verifyPassword = async (password, hashedPassword) => {
+  // Simple verification (NOT FOR PRODUCTION)
+  return btoa(password + 'salt123') === hashedPassword;
+};
+
 // Web3 Provider component
 export const Web3Provider = ({ children }) => {
   const [account, setAccount] = useState(null);
@@ -23,12 +35,35 @@ export const Web3Provider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [userRole, setUserRole] = useState('tokenizer');
   const [userWallets, setUserWallets] = useState([]);
+  const [connecting, setConnecting] = useState(false);
+  const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false);
 
   useEffect(() => {
     checkConnection();
   }, []);
 
   const checkConnection = async () => {
+    // Check if there's a session in localStorage
+    const session = localStorage.getItem('userSession');
+    if (session) {
+      try {
+        const userData = JSON.parse(session);
+        setUserProfile(userData);
+        setIsConnected(true);
+        setIsRegistered(true);
+        determineUserRole(userData.email);
+
+        // Load user wallets if user has an ID
+        if (userData.id) {
+          await fetchUserWallets(userData.id);
+        }
+        return;
+      } catch (e) {
+        console.error('Error parsing session data:', e);
+      }
+    }
+
+    // Otherwise check if wallet is connected
     if (typeof window.ethereum !== 'undefined') {
       try {
         const provider = new ethers.BrowserProvider(window.ethereum);
@@ -46,21 +81,114 @@ export const Web3Provider = ({ children }) => {
   };
 
   const connectWallet = async () => {
+    if (connecting) return;
+
     if (typeof window.ethereum !== 'undefined') {
       try {
+        setConnecting(true);
         await window.ethereum.request({ method: 'eth_requestAccounts' });
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
+
         setAccount(address);
         setProvider(provider);
         setIsConnected(true);
-        checkRegistration(address);
+        
+        // Check if wallet is registered
+        const isRegistered = await checkRegistration(address);
+        
+        // If wallet is connected but user not registered, we need profile completion
+        if (!isRegistered) {
+          setNeedsProfileCompletion(true);
+        }
+        
+        return address;
       } catch (error) {
         console.error('Error connecting wallet:', error);
+        throw error;
+      } finally {
+        setConnecting(false);
       }
     } else {
-      alert('MetaMask is not installed!');
+      throw new Error('MetaMask is not installed! Por favor instala MetaMask para continuar.');
+    }
+  };
+
+  const loginWithEmail = async (email, password) => {
+    try {
+      // Get user data first to check if we need to use password_hash or legacy password
+      const { data: user, error } = await supabase
+        .from('users_mt2024')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (error) {
+        throw new Error('Credenciales inválidas');
+      }
+
+      let isValid = false;
+
+      // Check if user has hashed password
+      if (user.password_hash) {
+        // Verify against hashed password
+        isValid = await verifyPassword(password, user.password_hash);
+      } else if (user.password) {
+        // Legacy support: check plain text password
+        isValid = user.password === password;
+
+        // If valid, migrate to hashed password
+        if (isValid) {
+          const password_hash = await hashPassword(password);
+          await supabase
+            .from('users_mt2024')
+            .update({ password_hash, password: null }) // Remove plain text password
+            .eq('id', user.id);
+        }
+      }
+
+      if (!isValid) {
+        throw new Error('Credenciales inválidas');
+      }
+
+      setUserProfile(user);
+      setIsConnected(true);
+      setIsRegistered(true);
+      determineUserRole(user.email);
+
+      // Get user wallets
+      await fetchUserWallets(user.id);
+
+      // Save session to localStorage
+      localStorage.setItem('userSession', JSON.stringify(user));
+
+      return user;
+    } catch (error) {
+      console.error('Error logging in with email:', error);
+      throw error;
+    }
+  };
+
+  const registerWithEmail = async (userData) => {
+    try {
+      // Hash password before registering
+      const hashedPassword = await hashPassword(userData.password);
+
+      const newUser = await authRegisterUser({ ...userData, password: hashedPassword });
+
+      setUserProfile(newUser);
+      setIsConnected(true);
+      setIsRegistered(true);
+      setUserRole(newUser.role || 'tokenizer');
+
+      // Save session to localStorage
+      localStorage.setItem('userSession', JSON.stringify(newUser));
+
+      return newUser;
+    } catch (error) {
+      console.error('Error registering with email:', error);
+      throw error;
     }
   };
 
@@ -75,32 +203,24 @@ export const Web3Provider = ({ children }) => {
       if (!walletError && walletData) {
         setUserProfile(walletData.users_mt2024);
         setIsRegistered(true);
+        setNeedsProfileCompletion(false);
         determineUserRole(walletData.users_mt2024.email);
         fetchUserWallets(walletData.users_mt2024.id);
-        return;
-      }
 
-      const userData = localStorage.getItem(`user_${address}`);
-      if (userData) {
-        const profile = JSON.parse(userData);
-        setUserProfile(profile);
-        setIsRegistered(true);
-        determineUserRole(profile.email);
+        // Save session to localStorage
+        localStorage.setItem('userSession', JSON.stringify(walletData.users_mt2024));
+        return true;
       }
+      return false;
     } catch (error) {
       console.error('Error checking registration:', error);
-      const userData = localStorage.getItem(`user_${address}`);
-      if (userData) {
-        const profile = JSON.parse(userData);
-        setUserProfile(profile);
-        setIsRegistered(true);
-        determineUserRole(profile.email);
-      }
+      return false;
     }
   };
 
   const fetchUserWallets = async (userId) => {
-    if (!userId) return;
+    if (!userId) return [];
+
     try {
       const { data, error } = await supabase
         .from('wallets_mt2024')
@@ -109,15 +229,28 @@ export const Web3Provider = ({ children }) => {
 
       if (!error && data) {
         setUserWallets(data);
+
+        // Set the first wallet as active account if no account is set
+        if (!account && data.length > 0) {
+          setAccount(data[0].wallet_address);
+        }
+
+        return data;
       }
+      return [];
     } catch (error) {
       console.error('Error fetching user wallets:', error);
+      return [];
     }
   };
 
-  const addWallet = async (walletAddress, signature) => {
-    if (!userProfile || !userProfile.id) return false;
+  const addWallet = async (walletAddress, signature = null) => {
+    if (!userProfile || !userProfile.id) {
+      throw new Error('Usuario no identificado. Por favor inicia sesión nuevamente.');
+    }
+
     try {
+      // Check if wallet is already registered
       const { data: existingWallet, error: checkError } = await supabase
         .from('wallets_mt2024')
         .select('*')
@@ -125,8 +258,7 @@ export const Web3Provider = ({ children }) => {
         .single();
 
       if (existingWallet) {
-        alert('Esta wallet ya está asociada a una cuenta');
-        return false;
+        throw new Error('Esta wallet ya está asociada a una cuenta');
       }
 
       const { data, error } = await supabase
@@ -140,16 +272,20 @@ export const Web3Provider = ({ children }) => {
         .select()
         .single();
 
-      if (!error) {
-        fetchUserWallets(userProfile.id);
-        return true;
-      } else {
-        console.error('Error adding wallet:', error);
-        return false;
+      if (error) throw error;
+
+      // Refresh wallets list
+      const wallets = await fetchUserWallets(userProfile.id);
+
+      // Set as active account if it's the first wallet
+      if (!account || wallets.length === 1) {
+        setAccount(walletAddress);
       }
+
+      return data;
     } catch (error) {
       console.error('Error in addWallet:', error);
-      return false;
+      throw error;
     }
   };
 
@@ -172,21 +308,18 @@ export const Web3Provider = ({ children }) => {
         .single();
 
       if (existingUser) {
-        alert('Este correo electrónico ya está registrado');
-        return false;
+        throw new Error('Este correo electrónico ya está registrado');
       }
 
-      const userWithAddress = {
-        ...userData,
-        address: account,
-        wallet_address: account
-      };
+      // Hash password
+      const password_hash = await hashPassword(userData.password);
 
       const { data: userData2, error: userError } = await supabase
         .from('users_mt2024')
         .insert([{
           name: userData.name,
           email: userData.email,
+          password_hash,
           declaration: userData.declaration,
           terms: userData.terms,
           role: userData.email === 'barbacastillo@gmail.com' ? 'admin' : 'tokenizer',
@@ -197,44 +330,31 @@ export const Web3Provider = ({ children }) => {
 
       if (userError) {
         console.error('Error saving user to Supabase:', userError);
-        localStorage.setItem(`user_${account}`, JSON.stringify(userWithAddress));
-        setUserProfile(userWithAddress);
-        setIsRegistered(true);
-        determineUserRole(userData.email);
-        return true;
+        throw userError;
       }
 
-      const { data: walletData, error: walletError } = await supabase
-        .from('wallets_mt2024')
-        .insert([{
-          user_id: userData2.id,
-          wallet_address: account,
-          created_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
-
-      if (walletError) {
-        console.error('Error saving wallet to Supabase:', walletError);
+      if (account) {
+        try {
+          await addWallet(account);
+        } catch (walletError) {
+          console.error('Error saving wallet to Supabase:', walletError);
+          // Continue even if wallet association fails
+        }
       }
 
       setUserProfile(userData2);
       setIsRegistered(true);
+      setNeedsProfileCompletion(false);
       determineUserRole(userData.email);
-      fetchUserWallets(userData2.id);
-      return true;
+      await fetchUserWallets(userData2.id);
+
+      // Save session to localStorage
+      localStorage.setItem('userSession', JSON.stringify(userData2));
+
+      return userData2;
     } catch (error) {
       console.error('Error in registerUser:', error);
-      const userWithAddress = {
-        ...userData,
-        address: account,
-        wallet_address: account
-      };
-      localStorage.setItem(`user_${account}`, JSON.stringify(userWithAddress));
-      setUserProfile(userWithAddress);
-      setIsRegistered(true);
-      determineUserRole(userData.email);
-      return true;
+      throw error;
     }
   };
 
@@ -246,6 +366,8 @@ export const Web3Provider = ({ children }) => {
     setUserProfile(null);
     setUserRole('tokenizer');
     setUserWallets([]);
+    setNeedsProfileCompletion(false);
+    localStorage.removeItem('userSession');
   };
 
   const getAllUsers = async () => {
@@ -260,27 +382,11 @@ export const Web3Provider = ({ children }) => {
           ...user,
           address: user.wallets_mt2024?.[0]?.wallet_address,
           wallets: user.wallets_mt2024 || [],
-          role: user.role
+          role: user.role,
+          roles: user.roles || [user.role].filter(Boolean)
         }));
       }
-
-      const users = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('user_')) {
-          const userData = JSON.parse(localStorage.getItem(key));
-          const email = userData.email;
-          let role = 'tokenizer';
-          if (email === 'barbacastillo@gmail.com') {
-            role = 'admin';
-          } else if (email && email.includes('operador')) {
-            role = 'operador';
-          }
-          users.push({...userData, role});
-        }
-      }
-
-      return users;
+      return [];
     } catch (error) {
       console.error('Error getting all users:', error);
       return [];
@@ -289,6 +395,7 @@ export const Web3Provider = ({ children }) => {
 
   const saveHolding = async (assetId, tokens) => {
     if (!account) return false;
+
     try {
       const { data, error } = await supabase
         .from('holdings_mt2024')
@@ -317,6 +424,7 @@ export const Web3Provider = ({ children }) => {
 
   const getHolding = async (assetId) => {
     if (!account) return 0;
+
     try {
       const { data, error } = await supabase
         .from('holdings_mt2024')
@@ -347,13 +455,18 @@ export const Web3Provider = ({ children }) => {
     userProfile,
     userRole,
     userWallets,
+    needsProfileCompletion,
     connectWallet,
     registerUser,
     disconnect,
     getAllUsers,
     saveHolding,
     getHolding,
-    addWallet
+    addWallet,
+    loginWithEmail,
+    registerWithEmail,
+    fetchUserWallets,
+    connecting
   };
 
   return (

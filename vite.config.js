@@ -25,5 +25,9 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true
+  },
+  // Add this to handle browser compatibility issues
+  define: {
+    global: 'globalThis'
   }
 });

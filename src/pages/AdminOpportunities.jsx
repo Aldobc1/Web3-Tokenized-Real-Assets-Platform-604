@@ -13,6 +13,7 @@ const { FiPlus, FiEdit, FiTrash2, FiSave, FiX, FiImage } = FiIcons;
 const AdminOpportunities = () => {
   const { t, language } = useLanguage();
   const { userRole, account } = useWeb3();
+  
   const [showForm, setShowForm] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
   const [assets, setAssets] = useState([]);
@@ -61,6 +62,7 @@ const AdminOpportunities = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
     if (name === 'contractAddress' && value) {
       // When contract address changes, fetch contract details
       handleContractAddressChange(value);
@@ -83,9 +85,11 @@ const AdminOpportunities = () => {
     try {
       // Find the contract in the dropdown options first (faster)
       const selectedContract = availableContracts.find(c => c.value === contractAddress);
+      
       if (selectedContract) {
         // Get detailed contract info
         const contractData = await getSmartContractByAddress(contractAddress);
+        
         setFormData(prev => ({
           ...prev,
           contractAddress,
@@ -136,6 +140,7 @@ const AdminOpportunities = () => {
 
     try {
       setIsSubmitting(true);
+      
       if (editingAsset) {
         // For updates, don't modify sold unless explicitly changed
         if (editingAsset.sold === sold) {
@@ -155,6 +160,7 @@ const AdminOpportunities = () => {
         await addAsset(assetData);
         alert('Oportunidad agregada exitosamente');
       }
+      
       resetForm();
       await loadData(); // Reload data from Supabase
     } catch (error) {
@@ -293,7 +299,6 @@ const AdminOpportunities = () => {
                     disabled={isSubmitting}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.nameEn')}
@@ -308,7 +313,6 @@ const AdminOpportunities = () => {
                     disabled={isSubmitting}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.type')}
@@ -325,7 +329,6 @@ const AdminOpportunities = () => {
                     <option value="business">Negocios</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.operator')}
@@ -346,7 +349,6 @@ const AdminOpportunities = () => {
                     ))}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.projectedReturn')}
@@ -362,7 +364,6 @@ const AdminOpportunities = () => {
                     disabled={isSubmitting}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.tokenPrice')}
@@ -377,7 +378,6 @@ const AdminOpportunities = () => {
                     disabled={isSubmitting}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Contract Address (ERC-20)
@@ -402,7 +402,6 @@ const AdminOpportunities = () => {
                     </p>
                   )}
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.image')}
@@ -418,7 +417,6 @@ const AdminOpportunities = () => {
                     placeholder="https://example.com/image.jpg"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Tokens Vendidos
@@ -435,7 +433,6 @@ const AdminOpportunities = () => {
                     Los tokens vendidos no se pueden editar manualmente
                   </p>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Supply Total
@@ -452,14 +449,16 @@ const AdminOpportunities = () => {
                     {formData.contractAddress ? 'Valor obtenido del smart contract' : 'Supply total de tokens del activo'}
                   </p>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Tokens Disponibles
                   </label>
                   <input
                     type="number"
-                    value={calculateAvailableTokens(parseInt(formData.totalSupply) || 0, parseInt(formData.sold) || 0)}
+                    value={calculateAvailableTokens(
+                      parseInt(formData.totalSupply) || 0,
+                      parseInt(formData.sold) || 0
+                    )}
                     className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-600 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300"
                     disabled={true}
                   />
@@ -467,7 +466,6 @@ const AdminOpportunities = () => {
                     Calculado automáticamente: Supply Total - Tokens Vendidos
                   </p>
                 </div>
-
                 {formData.contractAddress && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -546,7 +544,7 @@ const AdminOpportunities = () => {
             Oportunidades Actuales ({assets.length})
           </h2>
         </div>
-
+        
         {assets.length === 0 ? (
           <div className="p-6 text-center">
             <p className="text-gray-500 dark:text-gray-400">
@@ -602,7 +600,7 @@ const AdminOpportunities = () => {
                               alt={getAssetName(asset)}
                               className="h-12 w-12 rounded-lg object-cover"
                               onError={(e) => {
-                                e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAzMkMyNi42Mjc0IDMyIDMyIDI2LjYyNzQgMzIgMjBDMzIgMTMuMzcyNiAyNi42Mjc0IDggMjAgOEMxMy4zNzI2IDggOCAxMy4zNzI2IDggMjBDOCAyNi42Mjc0IDEzLjM3MjYgMzIgMjAgMzJaIiBmaWxsPSIjOUI5QkEwIi8+Cjwvc3ZnPgo=';
+                                e.target.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAzMkMyNi42Mjc0IDMyIDMyIDI2LjYyNzQgMzIgMjBDMzIgMTMuMzcyNiAyNi42Mjc0IDggMjAgOEMxMy4zNzI2IDggOCAxMy4zNzI2IDggMjBDOCAyNi42Mjc0IDEzLjM3MjYgMzIgMjAgMzJaIiBmaWxsPSIjOUI5QkEwIi8+Cjwvc3ZnPgo=';
                               }}
                             />
                           </div>
