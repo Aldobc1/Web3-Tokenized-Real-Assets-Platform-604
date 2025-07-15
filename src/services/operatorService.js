@@ -3,74 +3,88 @@ import supabase from '../lib/supabase';
 // Rate an operator
 export const rateOperator = async (operatorId, userId, rating, comment = '') => {
   try {
-    const { data, error } = await supabase
-      .from('operator_ratings_mt2024')
-      .upsert(
-        {
-          operator_id: operatorId,
-          user_id: userId,
-          rating: rating,
-          comment: comment,
-          updated_at: new Date().toISOString()
-        },
-        { onConflict: 'operator_id,user_id' }
-      )
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error rating operator:', error);
-      throw error;
+    // Validate required fields
+    if (!operatorId || !userId) {
+      throw new Error('Se requiere ID del operador y usuario');
     }
 
-    return data;
-  } catch (error) {
-    console.error('Error in rateOperator:', error);
-    throw error;
-  }
-};
+    // Ensure numeric values
+    const numericRating = Number(rating);
+    if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+      throw new Error('La calificación debe ser un número entre 1 y 5');
+    }
 
-// Get a user's rating for an operator
-export const getOperatorRating = async (operatorId, userId) => {
-  try {
-    const { data, error } = await supabase
+    // Create rating object
+    const ratingData = {
+      operator_id: operatorId,
+      user_id: userId,
+      rating: numericRating,
+      comment: comment || '',
+      updated_at: new Date().toISOString()
+    };
+
+    // Check if rating exists
+    const { data: existingRating, error: checkError } = await supabase
       .from('operator_ratings_mt2024')
-      .select('*')
+      .select('id')
       .eq('operator_id', operatorId)
       .eq('user_id', userId)
       .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // No rating found
-        return null;
-      }
-      throw error;
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
     }
 
-    return data;
+    let result;
+    if (existingRating) {
+      // Update existing rating
+      const { data, error } = await supabase
+        .from('operator_ratings_mt2024')
+        .update(ratingData)
+        .eq('id', existingRating.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      result = data;
+    } else {
+      // Insert new rating
+      const { data, error } = await supabase
+        .from('operator_ratings_mt2024')
+        .insert([{
+          ...ratingData,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      result = data;
+    }
+
+    return result;
   } catch (error) {
-    console.error('Error in getOperatorRating:', error);
-    return null;
+    console.error('Error in rateOperator:', error);
+    throw new Error(error.message || 'Error al guardar la calificación. Por favor intenta de nuevo.');
   }
 };
 
-// Get average rating for an operator
+// Get operator's average rating
 export const getOperatorAverageRating = async (operatorId) => {
   try {
     const { data, error } = await supabase
       .from('operator_ratings_mt2024')
       .select('rating')
       .eq('operator_id', operatorId);
-
+    
     if (error) throw error;
-
+    
     if (!data || data.length === 0) return 0;
-
+    
     const sum = data.reduce((acc, curr) => acc + curr.rating, 0);
     return parseFloat((sum / data.length).toFixed(1));
   } catch (error) {
-    console.error('Error in getOperatorAverageRating:', error);
+    console.error('Error getting average rating:', error);
     return 0;
   }
 };
@@ -82,20 +96,41 @@ export const getOperatorRatings = async (operatorId) => {
       .from('operator_ratings_mt2024')
       .select(`
         *,
-        users_mt2024 (id, name)
+        users_mt2024 (
+          id,
+          name,
+          email
+        )
       `)
       .eq('operator_id', operatorId)
       .order('created_at', { ascending: false });
-
+    
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error('Error in getOperatorRatings:', error);
+    console.error('Error getting operator ratings:', error);
     return [];
   }
 };
 
-// Add a rating (alias for rateOperator for consistency)
-export const addOperatorRating = async (operatorId, rating, comment, userId) => {
-  return await rateOperator(operatorId, userId, rating, comment);
+// Get a specific rating
+export const getOperatorRating = async (operatorId, userId) => {
+  try {
+    const { data, error } = await supabase
+      .from('operator_ratings_mt2024')
+      .select('*')
+      .eq('operator_id', operatorId)
+      .eq('user_id', userId)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error getting operator rating:', error);
+    return null;
+  }
 };

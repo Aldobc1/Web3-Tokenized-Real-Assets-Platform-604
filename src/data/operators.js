@@ -1,28 +1,5 @@
 import supabase from '../lib/supabase';
 
-// Local fallback data
-const localOperators = [
-  {
-    id: 1,
-    name: 'Heavy Equipment Solutions',
-    nameEn: 'Heavy Equipment Solutions',
-    email: 'contact@heavyequipment.com',
-    phone: '+1 (555) 123-4567',
-    company: 'Heavy Equipment Solutions LLC',
-    experience: '15 años',
-    experienceEn: '15 years',
-    specialization: 'Maquinaria Industrial',
-    specializationEn: 'Industrial Machinery',
-    description: 'Especialistas en equipos pesados con más de 15 años de experiencia en el mercado.',
-    descriptionEn: 'Heavy equipment specialists with over 15 years of market experience.',
-    profile_image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8YnVzaW5lc3MlMjBwZXJzb258ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60',
-    location: 'Miami, FL'
-  }
-];
-
-// Cache for operators data
-let operatorsCache = null;
-
 // Fetch operators from Supabase
 export const fetchOperators = async () => {
   try {
@@ -33,11 +10,10 @@ export const fetchOperators = async () => {
 
     if (error) {
       console.error('Error fetching operators:', error);
-      return localOperators;
+      throw error;
     }
 
-    // Transform Supabase data to match our format
-    const transformedOperators = data.map(operator => ({
+    return data.map(operator => ({
       id: operator.id,
       name: operator.name,
       nameEn: operator.name_en,
@@ -51,31 +27,48 @@ export const fetchOperators = async () => {
       description: operator.description,
       descriptionEn: operator.description_en,
       profile_image: operator.profile_image,
-      location: operator.location
+      location: operator.location,
+      created_at: operator.created_at,
+      updated_at: operator.updated_at
     }));
-
-    operatorsCache = transformedOperators;
-    return transformedOperators;
   } catch (error) {
     console.error('Error in fetchOperators:', error);
-    return localOperators;
+    return [];
   }
 };
 
 export const getOperators = async () => {
-  // Always fetch fresh data from Supabase
-  return await fetchOperators();
+  try {
+    return await fetchOperators();
+  } catch (error) {
+    console.error('Error in getOperators:', error);
+    return [];
+  }
 };
 
 export const getOperatorById = async (id) => {
-  const operators = await getOperators();
-  return operators.find(operator => operator.id === parseInt(id));
+  try {
+    if (!id) return null;
+    
+    const { data, error } = await supabase
+      .from('operators_mt2024')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching operator:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getOperatorById:', error);
+    return null;
+  }
 };
 
-export const getAllOperators = () => {
-  return getOperators();
-};
-
+// Add new operator
 export const addOperator = async (operatorData) => {
   try {
     const { data, error } = await supabase
@@ -93,25 +86,21 @@ export const addOperator = async (operatorData) => {
         description: operatorData.description,
         description_en: operatorData.descriptionEn,
         profile_image: operatorData.profile_image,
-        location: operatorData.location
+        location: operatorData.location,
+        created_at: new Date().toISOString()
       }])
       .select()
       .single();
 
-    if (error) {
-      console.error('Error adding operator:', error);
-      throw error;
-    }
-
-    // Clear cache to force refresh
-    operatorsCache = null;
+    if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error in addOperator:', error);
+    console.error('Error adding operator:', error);
     throw error;
   }
 };
 
+// Update existing operator
 export const updateOperator = async (id, operatorData) => {
   try {
     const { data, error } = await supabase
@@ -136,20 +125,15 @@ export const updateOperator = async (id, operatorData) => {
       .select()
       .single();
 
-    if (error) {
-      console.error('Error updating operator:', error);
-      throw error;
-    }
-
-    // Clear cache to force refresh
-    operatorsCache = null;
+    if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error in updateOperator:', error);
+    console.error('Error updating operator:', error);
     throw error;
   }
 };
 
+// Delete operator
 export const deleteOperator = async (id) => {
   try {
     const { error } = await supabase
@@ -157,39 +141,10 @@ export const deleteOperator = async (id) => {
       .delete()
       .eq('id', id);
 
-    if (error) {
-      console.error('Error deleting operator:', error);
-      throw error;
-    }
-
-    // Clear cache to force refresh
-    operatorsCache = null;
+    if (error) throw error;
     return true;
   } catch (error) {
-    console.error('Error in deleteOperator:', error);
+    console.error('Error deleting operator:', error);
     throw error;
-  }
-};
-
-// Get average rating for an operator
-export const getOperatorAverageRating = async (operatorId) => {
-  try {
-    const { data, error } = await supabase
-      .from('operator_ratings_mt2024')
-      .select('rating')
-      .eq('operator_id', operatorId);
-
-    if (error) {
-      console.error('Error fetching operator ratings:', error);
-      return 0;
-    }
-
-    if (!data || data.length === 0) return 0;
-
-    const sum = data.reduce((acc, curr) => acc + curr.rating, 0);
-    return parseFloat((sum / data.length).toFixed(1));
-  } catch (error) {
-    console.error('Error in getOperatorAverageRating:', error);
-    return 0;
   }
 };

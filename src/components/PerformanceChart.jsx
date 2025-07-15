@@ -89,11 +89,16 @@ const PerformanceChart = ({ assetId }) => {
             y: 0,
             x2: 0,
             y2: 1,
-            colorStops: [{
-              offset: 0, color: 'rgba(14, 165, 233, 0.3)'
-            }, {
-              offset: 1, color: 'rgba(14, 165, 233, 0.05)'
-            }]
+            colorStops: [
+              {
+                offset: 0,
+                color: 'rgba(14,165,233,0.3)'
+              },
+              {
+                offset: 1,
+                color: 'rgba(14,165,233,0.05)'
+              }
+            ]
           }
         }
       }

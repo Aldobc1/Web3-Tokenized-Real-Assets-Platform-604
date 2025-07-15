@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWeb3 } from '../contexts/Web3Context';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
+import supabase from '../lib/supabase';
 
-const { FiWallet, FiPlus, FiCopy, FiCheck, FiX, FiAlertCircle } = FiIcons;
+const { FiWallet, FiPlus, FiCopy, FiCheck, FiX, FiTrash2 } = FiIcons;
 
 const WalletManager = () => {
   const { userWallets, addWallet, connectWallet, account, fetchUserWallets, userProfile } = useWeb3();
@@ -12,25 +13,38 @@ const WalletManager = () => {
   const [manualWallet, setManualWallet] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
   const [error, setError] = useState('');
   const [copiedWallet, setCopiedWallet] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleConnectMetaMask = async () => {
     try {
       setIsConnecting(true);
       setError('');
+      setSuccess('');
       const walletAddress = await connectWallet();
-      
-      // Intenta asociar la wallet al usuario actual
-      try {
-        await addWallet(walletAddress);
-        alert('Wallet conectada y guardada exitosamente');
-      } catch (error) {
-        if (error.message === 'Esta wallet ya está asociada a una cuenta') {
-          setError('Esta wallet ya está asociada a otra cuenta. Por favor utiliza otra wallet o agrega una manualmente.');
-        } else {
-          throw error;
+
+      // Check if wallet is already in user's wallets
+      const walletExists = userWallets.some(w => w.wallet_address.toLowerCase() === walletAddress.toLowerCase());
+      if (walletExists) {
+        setSuccess('Esta wallet ya está asociada a tu cuenta');
+        return;
+      }
+
+      // Add wallet to database
+      if (userProfile && userProfile.id) {
+        await addWalletToDatabase(walletAddress, userProfile.id);
+        
+        // If this is the first wallet, also update the user's profile
+        if (userWallets.length === 0) {
+          await updateUserWithWallet(userProfile.id, walletAddress);
         }
+        
+        await fetchUserWallets(userProfile.id);
+        setSuccess('Wallet conectada y guardada exitosamente');
+      } else {
+        throw new Error('No se pudo identificar al usuario actual');
       }
     } catch (error) {
       console.error('Error connecting wallet:', error);
@@ -43,6 +57,8 @@ const WalletManager = () => {
   const handleAddManualWallet = async (e) => {
     e.preventDefault();
     if (!manualWallet.trim()) return;
+    setSuccess('');
+    setError('');
 
     // Basic ethereum address validation
     if (!/^0x[a-fA-F0-9]{40}$/.test(manualWallet.trim())) {
@@ -52,16 +68,133 @@ const WalletManager = () => {
 
     try {
       setIsAdding(true);
-      setError('');
-      await addWallet(manualWallet.trim());
-      setManualWallet('');
-      setShowAddForm(false);
-      alert('Wallet agregada exitosamente');
+
+      // Check if wallet is already in user's wallets
+      const walletExists = userWallets.some(w => w.wallet_address.toLowerCase() === manualWallet.toLowerCase());
+      if (walletExists) {
+        setError('Esta wallet ya está asociada a tu cuenta');
+        return;
+      }
+
+      // Add wallet to database
+      if (userProfile && userProfile.id) {
+        await addWalletToDatabase(manualWallet.trim(), userProfile.id);
+        
+        // If this is the first wallet, also update the user's profile
+        if (userWallets.length === 0) {
+          await updateUserWithWallet(userProfile.id, manualWallet.trim());
+        }
+        
+        await fetchUserWallets(userProfile.id);
+        setManualWallet('');
+        setShowAddForm(false);
+        setSuccess('Wallet agregada exitosamente');
+      } else {
+        throw new Error('No se pudo identificar al usuario actual');
+      }
     } catch (error) {
       console.error('Error adding manual wallet:', error);
       setError(error.message || 'Error al agregar wallet');
     } finally {
       setIsAdding(false);
+    }
+  };
+
+  // Function to add wallet to database
+  const addWalletToDatabase = async (walletAddress, userId) => {
+    try {
+      // Check if wallet is already registered to another user
+      const { data: existingWallet, error: checkError } = await supabase
+        .from('wallets_mt2024')
+        .select('*')
+        .eq('wallet_address', walletAddress)
+        .single();
+
+      if (existingWallet) {
+        throw new Error('Esta wallet ya está asociada a una cuenta');
+      }
+
+      // Insert the new wallet
+      const { data, error } = await supabase
+        .from('wallets_mt2024')
+        .insert([{
+          user_id: userId,
+          wallet_address: walletAddress,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error in addWalletToDatabase:', error);
+      throw error;
+    }
+  };
+
+  // Function to update user with wallet address
+  const updateUserWithWallet = async (userId, walletAddress) => {
+    try {
+      const { error } = await supabase
+        .from('users_mt2024')
+        .update({ 
+          wallet_address: walletAddress,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+        
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating user with wallet:', error);
+      throw error;
+    }
+  };
+
+  const removeWallet = async (walletId, walletAddress) => {
+    if (!userProfile || !userProfile.id) return;
+    setIsRemoving(true);
+
+    try {
+      // Don't allow removing the last wallet
+      if (userWallets.length <= 1) {
+        setError('Debes mantener al menos una wallet asociada a tu cuenta');
+        return;
+      }
+
+      // Don't allow removing the currently active wallet
+      if (walletAddress === account) {
+        setError('No puedes eliminar la wallet actualmente activa');
+        return;
+      }
+
+      setError('');
+      setSuccess('');
+      
+      // Delete wallet from database
+      const { error } = await supabase
+        .from('wallets_mt2024')
+        .delete()
+        .eq('id', walletId);
+        
+      if (error) throw error;
+      
+      // If the removed wallet was stored in the user's profile, update it with another wallet
+      if (userProfile.wallet_address === walletAddress) {
+        const remainingWallets = userWallets.filter(w => w.wallet_address !== walletAddress);
+        if (remainingWallets.length > 0) {
+          await updateUserWithWallet(userProfile.id, remainingWallets[0].wallet_address);
+        }
+      }
+      
+      await fetchUserWallets(userProfile.id);
+      setSuccess('Wallet eliminada exitosamente');
+    } catch (error) {
+      console.error('Error removing wallet:', error);
+      setError('Error al eliminar la wallet: ' + error.message);
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -74,9 +207,6 @@ const WalletManager = () => {
       console.error('Error copying to clipboard:', err);
     }
   };
-
-  // Determinar si debe mostrar un mensaje prominente para conectar wallet
-  const showNoWalletsMessage = userWallets.length === 0;
 
   return (
     <motion.div
@@ -95,19 +225,9 @@ const WalletManager = () => {
           <button
             onClick={handleConnectMetaMask}
             disabled={isConnecting}
-            className="px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 text-sm flex items-center"
+            className="px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 text-sm"
           >
-            {isConnecting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                <span>Conectando...</span>
-              </>
-            ) : (
-              <>
-                <img src="https://metamask.io/images/metamask-fox.svg" alt="MetaMask" className="w-4 h-4 mr-2" />
-                <span>Conectar MetaMask</span>
-              </>
-            )}
+            {isConnecting ? 'Conectando...' : 'Conectar MetaMask'}
           </button>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
@@ -121,26 +241,15 @@ const WalletManager = () => {
 
       {error && (
         <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg flex items-center">
-          <SafeIcon icon={FiAlertCircle} className="w-5 h-5 mr-2 flex-shrink-0" />
-          <span>{error}</span>
+          <SafeIcon icon={FiX} className="w-5 h-5 mr-2" />
+          {error}
         </div>
       )}
 
-      {/* Prominent Message When No Wallets */}
-      {showNoWalletsMessage && !error && (
-        <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <div className="flex items-start">
-            <SafeIcon icon={FiAlertCircle} className="w-6 h-6 text-blue-500 dark:text-blue-400 mr-3 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-1">
-                No tienes wallets asociadas a tu cuenta
-              </h4>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                Para realizar inversiones y gestionar tus activos, necesitas conectar o agregar una wallet. 
-                Puedes conectar MetaMask automáticamente o agregar una dirección de wallet manualmente.
-              </p>
-            </div>
-          </div>
+      {success && (
+        <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg flex items-center">
+          <SafeIcon icon={FiCheck} className="w-5 h-5 mr-2" />
+          {success}
         </div>
       )}
 
@@ -166,9 +275,6 @@ const WalletManager = () => {
                 required
                 disabled={isAdding}
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Ingresa una dirección de wallet de Ethereum válida comenzando con 0x
-              </p>
             </div>
             <div className="flex space-x-3">
               <button
@@ -182,16 +288,9 @@ const WalletManager = () => {
               <button
                 type="submit"
                 disabled={isAdding || !manualWallet.trim()}
-                className="flex-1 px-4 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 flex items-center justify-center"
+                className="flex-1 px-4 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
               >
-                {isAdding ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                    <span>Agregando...</span>
-                  </>
-                ) : (
-                  <span>Agregar Wallet</span>
-                )}
+                {isAdding ? 'Agregando...' : 'Agregar Wallet'}
               </button>
             </div>
           </form>
@@ -211,61 +310,70 @@ const WalletManager = () => {
             </p>
           </div>
         ) : (
-          <>
-            <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Tus Wallets ({userWallets.length})
-            </h4>
-            {userWallets.map((wallet, index) => (
-              <motion.div
-                key={wallet.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mr-3">
-                    <SafeIcon icon={FiWallet} className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+          userWallets.map((wallet, index) => (
+            <motion.div
+              key={wallet.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mr-3">
+                  <SafeIcon icon={FiWallet} className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <div className="flex items-center">
+                    <code className="text-sm font-mono text-gray-700 dark:text-gray-300">
+                      {wallet.wallet_address.slice(0, 6)}...{wallet.wallet_address.slice(-4)}
+                    </code>
+                    {wallet.wallet_address === account && (
+                      <span className="ml-2 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
+                        Activa
+                      </span>
+                    )}
+                    {wallet.wallet_address === userProfile?.wallet_address && (
+                      <span className="ml-2 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+                        Principal
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <div className="flex items-center">
-                      <code className="text-sm font-mono text-gray-700 dark:text-gray-300">
-                        {wallet.wallet_address.slice(0, 6)}...{wallet.wallet_address.slice(-4)}
-                      </code>
-                      {wallet.wallet_address === account && (
-                        <span className="ml-2 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
-                          Activa
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      Agregada: {new Date(wallet.created_at).toLocaleDateString()}
-                    </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Agregada: {new Date(wallet.created_at).toLocaleDateString()}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => copyToClipboard(wallet.wallet_address)}
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  title="Copiar dirección"
+                >
+                  <SafeIcon
+                    icon={copiedWallet === wallet.wallet_address ? FiCheck : FiCopy}
+                    className={`w-4 h-4 ${copiedWallet === wallet.wallet_address ? 'text-green-600' : ''}`}
+                  />
+                </button>
+                {userWallets.length > 1 && wallet.wallet_address !== account && (
                   <button
-                    onClick={() => copyToClipboard(wallet.wallet_address)}
-                    className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                    title="Copiar dirección"
+                    onClick={() => removeWallet(wallet.id, wallet.wallet_address)}
+                    disabled={isRemoving}
+                    className="p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+                    title="Eliminar wallet"
                   >
-                    <SafeIcon 
-                      icon={copiedWallet === wallet.wallet_address ? FiCheck : FiCopy} 
-                      className={`w-4 h-4 ${copiedWallet === wallet.wallet_address ? 'text-green-600' : ''}`} 
-                    />
+                    <SafeIcon icon={FiTrash2} className="w-4 h-4" />
                   </button>
-                </div>
-              </motion.div>
-            ))}
-          </>
+                )}
+              </div>
+            </motion.div>
+          ))
         )}
       </div>
 
       {userWallets.length > 0 && (
         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-800 dark:text-blue-200 text-sm">
           <p>
-            💡 <strong>Tip:</strong> Puedes tener múltiples wallets asociadas a tu cuenta. 
-            La wallet activa se usa para las transacciones.
+            💡 <strong>Tip:</strong> Puedes tener múltiples wallets asociadas a tu cuenta. La wallet activa se usa para las transacciones.
           </p>
         </div>
       )}

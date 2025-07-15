@@ -6,12 +6,11 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 
-const { FiPlus, FiEdit, FiTrash2, FiSave, FiX, FiBriefcase, FiMapPin } = FiIcons;
+const { FiUsers, FiPlus, FiEdit, FiTrash2, FiSave, FiX, FiBriefcase } = FiIcons;
 
 const AdminOperators = () => {
   const { t, language } = useLanguage();
   const { userRole } = useWeb3();
-  
   const [showForm, setShowForm] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
   const [operators, setOperators] = useState([]);
@@ -52,7 +51,10 @@ const AdminOperators = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -61,7 +63,6 @@ const AdminOperators = () => {
 
     try {
       setIsSubmitting(true);
-      
       if (editingOperator) {
         await updateOperator(editingOperator.id, formData);
         alert('Operador actualizado exitosamente');
@@ -69,7 +70,6 @@ const AdminOperators = () => {
         await addOperator(formData);
         alert('Operador agregado exitosamente');
       }
-      
       resetForm();
       await loadOperators(); // Reload data from Supabase
     } catch (error) {
@@ -192,6 +192,7 @@ const AdminOperators = () => {
                     disabled={isSubmitting}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.nameEn')}
@@ -206,6 +207,7 @@ const AdminOperators = () => {
                     disabled={isSubmitting}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.email')}
@@ -220,6 +222,7 @@ const AdminOperators = () => {
                     disabled={isSubmitting}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.phone')}
@@ -234,6 +237,7 @@ const AdminOperators = () => {
                     disabled={isSubmitting}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.company')}
@@ -248,6 +252,7 @@ const AdminOperators = () => {
                     disabled={isSubmitting}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.experience')}
@@ -262,6 +267,7 @@ const AdminOperators = () => {
                     disabled={isSubmitting}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Experiencia en Inglés
@@ -276,6 +282,7 @@ const AdminOperators = () => {
                     disabled={isSubmitting}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('form.specialization')}
@@ -290,6 +297,7 @@ const AdminOperators = () => {
                     disabled={isSubmitting}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Especialización en Inglés
@@ -304,6 +312,7 @@ const AdminOperators = () => {
                     disabled={isSubmitting}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     URL de Foto de Perfil
@@ -317,7 +326,20 @@ const AdminOperators = () => {
                     placeholder="https://ejemplo.com/imagen.jpg"
                     disabled={isSubmitting}
                   />
+                  {formData.profile_image && (
+                    <div className="mt-2">
+                      <img
+                        src={formData.profile_image}
+                        alt="Vista previa"
+                        className="w-20 h-20 object-cover rounded-full"
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/80?text=Error';
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Ubicación
@@ -333,7 +355,7 @@ const AdminOperators = () => {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('form.description')}
@@ -348,7 +370,7 @@ const AdminOperators = () => {
                   disabled={isSubmitting}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('form.descriptionEn')}
@@ -363,7 +385,7 @@ const AdminOperators = () => {
                   disabled={isSubmitting}
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-3 pt-6">
                 <button
                   type="button"
@@ -394,7 +416,7 @@ const AdminOperators = () => {
             Operadores Registrados ({operators.length})
           </h2>
         </div>
-        
+
         {operators.length === 0 ? (
           <div className="p-6 text-center">
             <p className="text-gray-500 dark:text-gray-400">
@@ -443,12 +465,15 @@ const AdminOperators = () => {
                               alt={getOperatorName(operator)}
                               className="h-10 w-10 object-cover"
                               onError={(e) => {
-                                e.target.src='https://via.placeholder.com/40?text=OP';
+                                e.target.src = 'https://via.placeholder.com/40?text=OP';
                               }}
                             />
                           ) : (
                             <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                              <SafeIcon icon={FiBriefcase} className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                              <SafeIcon
+                                icon={FiBriefcase}
+                                className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                              />
                             </div>
                           )}
                         </div>
@@ -472,14 +497,7 @@ const AdminOperators = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {operator.location ? (
-                        <div className="flex items-center text-sm text-gray-900 dark:text-white">
-                          <SafeIcon icon={FiMapPin} className="w-4 h-4 mr-1 text-gray-500 dark:text-gray-400" />
-                          <span>{operator.location}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-500 dark:text-gray-400 text-sm">No especificada</span>
-                      )}
+                      <div className="text-sm text-gray-900 dark:text-white">{operator.location}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {language === 'es' ? operator.experience : operator.experienceEn}

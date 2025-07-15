@@ -26,8 +26,7 @@ export default defineConfig({
     port: 5173,
     host: true
   },
-  // Add this to handle browser compatibility issues
-  define: {
-    global: 'globalThis'
+  optimizeDeps: {
+    exclude: ['crypto']
   }
 });

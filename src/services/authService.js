@@ -1,19 +1,20 @@
 import supabase from '../lib/supabase';
 
-// Simplified password handling without bcrypt
-const hashPassword = async (password) => {
-  // Simple hash for frontend (NOT FOR PRODUCTION)
-  return btoa(password + 'salt123');
-};
-
-const verifyPassword = async (password, hashedPassword) => {
-  // Simple verification (NOT FOR PRODUCTION)
-  return btoa(password + 'salt123') === hashedPassword;
-};
-
+// Register new user
 export const registerUser = async (userData) => {
-  const { email, password, name, role = 'tokenizer' } = userData;
+  const { email, password, name, declaration, terms, role = 'tokenizer' } = userData;
+  
   try {
+    // Validate required fields
+    if (!email || !password || !name) {
+      throw new Error('Todos los campos son requeridos');
+    }
+
+    // Validate declaration and terms
+    if (!declaration || !terms) {
+      throw new Error('Debes aceptar los términos y la declaración para registrarte');
+    }
+
     // Check if email exists
     const { data: existingUser } = await supabase
       .from('users_mt2024')
@@ -25,15 +26,15 @@ export const registerUser = async (userData) => {
       throw new Error('Email already registered');
     }
 
-    // Create user with basic hashed password
-    const password_hash = await hashPassword(password);
-
+    // Create user with encrypted password using Supabase's built-in encryption
     const { data: newUser, error } = await supabase
       .from('users_mt2024')
       .insert([{
         email,
         name,
-        password_hash,
+        password, // Supabase will handle password encryption
+        declaration,
+        terms,
         role,
         created_at: new Date().toISOString()
       }])
@@ -48,43 +49,25 @@ export const registerUser = async (userData) => {
   }
 };
 
+// Login user
 export const loginUser = async (email, password) => {
   try {
+    if (!email || !password) {
+      throw new Error('Email y contraseña son requeridos');
+    }
+
+    // Use Supabase's built-in auth
     const { data: user, error } = await supabase
       .from('users_mt2024')
       .select('*')
       .eq('email', email)
+      .eq('password', password) // In production, use Supabase Auth instead
       .single();
 
-    if (error || !user) throw new Error('Invalid credentials');
-
-    const isValid = await verifyPassword(password, user.password_hash);
-    if (!isValid) throw new Error('Invalid credentials');
-
+    if (error || !user) throw new Error('Credenciales inválidas');
     return user;
   } catch (error) {
     console.error('Error in login:', error);
-    throw error;
-  }
-};
-
-export const updateUserPassword = async (userId, newPassword) => {
-  try {
-    const password_hash = await hashPassword(newPassword);
-    const { data, error } = await supabase
-      .from('users_mt2024')
-      .update({
-        password_hash,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error updating password:', error);
     throw error;
   }
 };

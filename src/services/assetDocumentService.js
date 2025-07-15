@@ -8,12 +8,12 @@ export const getAssetDocuments = async (assetId) => {
       .select('*')
       .eq('asset_id', assetId)
       .order('created_at', { ascending: false });
-
+    
     if (error) {
       console.error('Error fetching asset documents:', error);
       throw error;
     }
-
+    
     return data || [];
   } catch (error) {
     console.error('Error in getAssetDocuments:', error);
@@ -41,12 +41,12 @@ export const saveAssetDocument = async (assetId, documentData) => {
       })
       .select()
       .single();
-
+    
     if (error) {
       console.error('Error saving asset document:', error);
       throw error;
     }
-
+    
     return data;
   } catch (error) {
     console.error('Error in saveAssetDocument:', error);
@@ -62,12 +62,12 @@ export const deleteAssetDocument = async (assetId, documentType) => {
       .delete()
       .eq('asset_id', assetId)
       .eq('document_type', documentType);
-
+    
     if (error) {
       console.error('Error deleting asset document:', error);
       throw error;
     }
-
+    
     return true;
   } catch (error) {
     console.error('Error in deleteAssetDocument:', error);
