@@ -16,21 +16,9 @@ import MarketplaceSection from '../components/MarketplaceSection';
 import ClaimsHistorySection from '../components/ClaimsHistorySection';
 import DueDiligenceSection from '../components/DueDiligenceSection';
 import OperatorModal from '../components/OperatorModal';
+import BlockchainTokenBalance from '../components/BlockchainTokenBalance';
 
-const {
-  FiArrowLeft,
-  FiDollarSign,
-  FiTrendingUp,
-  FiUser,
-  FiShoppingCart,
-  FiCheck,
-  FiX,
-  FiAlertCircle,
-  FiCopy,
-  FiFileText,
-  FiBarChart2,
-  FiStar
-} = FiIcons;
+const { FiArrowLeft, FiDollarSign, FiTrendingUp, FiUser, FiShoppingCart, FiCheck, FiX, FiAlertCircle, FiCopy, FiFileText, FiBarChart2, FiStar } = FiIcons;
 
 const AssetDetail = () => {
   const { id } = useParams();
@@ -73,7 +61,6 @@ const AssetDetail = () => {
         setError('Asset no encontrado');
         return;
       }
-
       setAsset(assetData);
 
       // Load operator data if available
@@ -252,6 +239,7 @@ const AssetDetail = () => {
                 }}
               />
             </div>
+
             <div className="lg:col-span-1 p-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
@@ -386,7 +374,9 @@ const AssetDetail = () => {
                                 key={star}
                                 icon={FiStar}
                                 className={`w-4 h-4 ${
-                                  star <= operatorRating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                                  star <= operatorRating
+                                    ? 'text-yellow-400 fill-current'
+                                    : 'text-gray-300'
                                 }`}
                               />
                             ))}
@@ -501,12 +491,19 @@ const AssetDetail = () => {
               />
             )}
 
-            {activeTab === 'dueDiligence' && (
-              <DueDiligenceSection asset={asset} documents={documents} />
-            )}
+            {activeTab === 'dueDiligence' && <DueDiligenceSection asset={asset} documents={documents} />}
 
             {activeTab === 'claims' && isConnected && (
               <ClaimsHistorySection assetId={asset.id} userWallet={account} />
+            )}
+
+            {/* Blockchain Token Balance Section - Add this component after any active tab content */}
+            {isConnected && asset.contractAddress && (
+              <BlockchainTokenBalance 
+                contractAddress={asset.contractAddress}
+                userWallet={account}
+                assetName={getAssetName()}
+              />
             )}
           </div>
 
@@ -568,6 +565,7 @@ const AssetDetail = () => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Confirmar Compra
             </h3>
+
             <div className="space-y-3 mb-6">
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-300">Asset:</span>
@@ -584,6 +582,7 @@ const AssetDetail = () => {
                 </span>
               </div>
             </div>
+
             <div className="flex space-x-3">
               <button
                 onClick={() => setShowPurchaseModal(false)}
@@ -645,14 +644,15 @@ const AssetDetail = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 max-w-md w-full mx-4 text-center">
             <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
-              <SafeIcon icon={FiAlertCircle} className="w-8 h-8 text-red-600 dark:text-red-400" />
+              <SafeIcon
+                icon={FiAlertCircle}
+                className="w-8 h-8 text-red-600 dark:text-red-400"
+              />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Error en la Compra
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              {errorMessage}
-            </p>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">{errorMessage}</p>
             <button
               onClick={() => setShowErrorModal(false)}
               className="w-full bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition-colors"

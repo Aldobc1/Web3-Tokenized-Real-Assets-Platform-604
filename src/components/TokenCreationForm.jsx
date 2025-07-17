@@ -7,14 +7,14 @@ import SafeIcon from '../common/SafeIcon';
 
 const { FiCheck, FiX, FiCopy, FiSave } = FiIcons;
 
-const TokenCreationForm = ({ 
-  onTokenCreated = () => {}, 
-  onCancel = () => {}, 
-  initialName = '', 
-  initialSymbol = '', 
-  initialSupply = 1000000 
+const TokenCreationForm = ({
+  onTokenCreated = () => {},
+  onCancel = () => {},
+  initialName = '',
+  initialSymbol = '',
+  initialSupply = 1000000
 }) => {
-  const { account } = useWeb3(); // Removido createERC20Token
+  const { account } = useWeb3();
   const [formData, setFormData] = useState({
     name: initialName || '',
     symbol: initialSymbol || '',
@@ -22,6 +22,7 @@ const TokenCreationForm = ({
     supply: initialSupply || 1000000,
     blockchain: 'polygon'
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdToken, setCreatedToken] = useState(null);
 
@@ -34,7 +35,6 @@ const TokenCreationForm = ({
   };
 
   const generateUniqueContractAddress = () => {
-    // Generate a more unique contract address to avoid duplicates
     const timestamp = Date.now();
     const random = Math.random().toString(16).slice(2, 10);
     const userPart = account ? account.slice(-4) : '0000';
@@ -44,8 +44,8 @@ const TokenCreationForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
-
     setIsSubmitting(true);
+
     try {
       // Generate unique contract address
       const contractAddress = generateUniqueContractAddress();
@@ -53,7 +53,7 @@ const TokenCreationForm = ({
       // Verificar que no existe otro contrato con la misma dirección
       let attempts = 0;
       let uniqueAddress = contractAddress;
-      
+
       while (attempts < 5) {
         try {
           // Intentar crear el smart contract en la base de datos
@@ -68,23 +68,17 @@ const TokenCreationForm = ({
             token_type: 'ERC20',
             documents: {} // Initialize with empty documents object
           });
-          
+
           // Si llegamos aquí, la creación fue exitosa
-          setCreatedToken({
-            ...formData,
-            contractAddress: uniqueAddress
-          });
-          
+          setCreatedToken({...formData, contractAddress: uniqueAddress});
           onTokenCreated(uniqueAddress, formData);
           break; // Salir del bucle
-          
         } catch (error) {
           if (error.message && error.message.includes('duplicate key value')) {
             // Si hay duplicado, generar nueva dirección e intentar de nuevo
             attempts++;
             uniqueAddress = generateUniqueContractAddress();
             console.log(`Intento ${attempts}: Generando nueva dirección debido a duplicado`);
-            
             if (attempts >= 5) {
               throw new Error('No se pudo generar una dirección única después de varios intentos');
             }
@@ -94,7 +88,6 @@ const TokenCreationForm = ({
           }
         }
       }
-      
     } catch (error) {
       console.error('Error creating token:', error);
       alert('Error al crear el token: ' + error.message);
@@ -109,6 +102,19 @@ const TokenCreationForm = ({
       alert('Dirección copiada al portapapeles');
     } catch (err) {
       console.error('Error copying to clipboard:', err);
+    }
+  };
+
+  const getBlockchainIcon = (blockchain) => {
+    switch (blockchain) {
+      case 'polygon':
+        return '💜'; // Purple heart for Polygon
+      case 'bsc':
+        return '🟡'; // Yellow circle for BSC
+      case 'sepolia':
+        return '💠'; // Diamond for Sepolia
+      default:
+        return '🔗'; // Chain emoji for default
     }
   };
 
@@ -141,12 +147,14 @@ const TokenCreationForm = ({
                 <p className="font-medium text-gray-900 dark:text-white">{createdToken.name}</p>
               </div>
             </div>
+
             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div>
                 <span className="text-sm text-gray-500 dark:text-gray-400">Símbolo</span>
                 <p className="font-medium text-gray-900 dark:text-white">{createdToken.symbol}</p>
               </div>
             </div>
+
             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div>
                 <span className="text-sm text-gray-500 dark:text-gray-400">Supply</span>
@@ -155,14 +163,19 @@ const TokenCreationForm = ({
                 </p>
               </div>
             </div>
+
             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div>
                 <span className="text-sm text-gray-500 dark:text-gray-400">Blockchain</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {createdToken.blockchain === 'polygon' ? 'Polygon' : 'Binance Smart Chain'}
+                <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  {getBlockchainIcon(createdToken.blockchain)}
+                  {createdToken.blockchain === 'polygon' ? 'Polygon' : 
+                   createdToken.blockchain === 'bsc' ? 'Binance Smart Chain' : 
+                   'Sepolia ETH'}
                 </p>
               </div>
             </div>
+
             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div className="flex-1">
                 <span className="text-sm text-gray-500 dark:text-gray-400">Dirección del Contrato</span>
@@ -206,6 +219,7 @@ const TokenCreationForm = ({
                 disabled={isSubmitting}
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Símbolo
@@ -225,6 +239,7 @@ const TokenCreationForm = ({
                 Símbolo corto para identificar tu token (máximo 8 caracteres)
               </p>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Decimales
@@ -244,6 +259,7 @@ const TokenCreationForm = ({
                 Número de decimales para dividir el token (recomendado: 18)
               </p>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Supply Total
@@ -259,6 +275,7 @@ const TokenCreationForm = ({
                 disabled={isSubmitting}
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Blockchain
@@ -270,10 +287,12 @@ const TokenCreationForm = ({
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white"
                 disabled={isSubmitting}
               >
-                <option value="polygon">Polygon</option>
-                <option value="bsc">Binance Smart Chain</option>
+                <option value="polygon">💜 Polygon</option>
+                <option value="bsc">🟡 Binance Smart Chain</option>
+                <option value="sepolia">💠 Sepolia ETH</option>
               </select>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Owner
@@ -292,7 +311,7 @@ const TokenCreationForm = ({
 
           <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg text-yellow-800 dark:text-yellow-200 text-sm">
             <p>
-              Al crear el token, se generará un smart contract único en la blockchain seleccionada. 
+              Al crear el token, se generará un smart contract único en la blockchain seleccionada.
               La dirección del contrato será generada automáticamente.
             </p>
           </div>
@@ -306,6 +325,7 @@ const TokenCreationForm = ({
             >
               Cancelar
             </button>
+
             <button
               type="submit"
               disabled={isSubmitting}
